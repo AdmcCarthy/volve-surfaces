@@ -84,6 +84,7 @@ async () => {
 """
 
 PAGES = [
+    ("viewer_locator", "viewer.html", ".vs-tb-loc canvas", "light"),
     (
         "viewer_contacts_standard",
         "viewer.html#set=synthetic&contacts=on&ccase=model&cpalette=geostandard&faults=polygons",
@@ -156,7 +157,7 @@ def main(out: Path) -> int:
             page.goto(base + path)
             page.wait_for_timeout(2500)
             n = page.evaluate(
-                f"[...document.querySelectorAll('{painted}')].filter(c => c.width > 300).length"
+                f"[...document.querySelectorAll('{painted}')].filter(c => c.width > 200).length"
             )
             page.screenshot(path=str(out / f"{name}.png"))
             if errors or n == 0:

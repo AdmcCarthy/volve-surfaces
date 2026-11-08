@@ -23,6 +23,7 @@ def stage(out: Path) -> None:
         shutil.copytree(
             ROOT / src, out / "data" / name, ignore=shutil.ignore_patterns(".gitkeep")
         )
+    shutil.copytree(ROOT / "data" / "context", out / "data" / "context")
     (out / ".nojekyll").write_text("", encoding="utf-8")
 
 

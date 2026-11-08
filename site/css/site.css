@@ -61,3 +61,11 @@ footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
 .vs-entry-bar > div { width: 14rem; flex: none; }
 .vs-entry-bar .vs-bar { height: 10px; }
 .vs-note-entry { font-size: 0.74rem; color: var(--ss-text-muted); font-style: italic; max-width: 40rem; }
+
+.vs-titlebox { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-start; border: 1px solid var(--ss-border); border-radius: 8px; padding: 10px 12px; margin: 10px 0; }
+.vs-tb-rows { flex: 1 1 22rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 4px 16px; margin: 0; }
+.vs-tb-rows div { display: grid; grid-template-columns: 6.5rem 1fr; gap: 8px; border-bottom: 1px solid var(--ss-border-subtle); padding: 2px 0; }
+.vs-tb-rows dt { font: 600 0.72rem var(--ss-font-body); color: var(--ss-text-subtle); }
+.vs-tb-rows dd { margin: 0; font: 500 0.8rem var(--ss-font-body); color: var(--ss-text); }
+.vs-tb-loc { flex: 0 0 auto; max-width: 220px; }
+.vs-tb-loc canvas { display: block; }

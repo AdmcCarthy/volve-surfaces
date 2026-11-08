@@ -137,3 +137,13 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 - Where does the fault type and downthrown side come from for Volve? The sticks and polygons have names only. Candidates: derive it from the surfaces (throw direction), take it from the Volve reports, or leave it unknown.
 - Should the Sodir adapter be shared with Wildcat's `fetch_sodir.py` (one place, two consumers), or stay separate for now?
 - Standard terminology in Norwegian as an option, or English only?
+
+## Map furniture (2026-11-08)
+
+| Part | Where | Notes |
+|---|---|---|
+| Scale bar and north arrow | `site/js/host/furniture.js`, called by `compose(..., { furniture: true })` | Round length up to a quarter of the map width, four alternating blocks; on the canvas so exports include it |
+| Title box | `site/js/host/titlebox.js` | Geostandard field names (map type, horizon, field, block and licence, area, coverage in UTM format, projection, datums, contour interval, date); inspired by, not bound to, the standard; the method and confidence stay in the fact strip |
+| Location map | `drawLocator` in `titlebox.js`; data `data/context/north_sea.json` from `scripts/context.py` | Land and fields from Wildcat's Sodir layers (NLOD 2.0); real data only; the synthetic map says it has no real location |
+
+Not done: a 1:n scale ratio (a screen has none), revision and approval fields, export to PNG or PDF.

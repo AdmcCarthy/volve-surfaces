@@ -95,3 +95,24 @@ def test_contacts_layer_uses_the_surface_module_but_never_another_layer_or_the_h
     assert (
         "../surface/fill.js" in contacts and "../vendor/subscout/symbols.js" in contacts
     )  # compute from the surface module, symbols from SubScout
+
+
+def test_context_for_the_location_map_holds_the_volve_field_and_frame():
+    import json
+
+    ctx = json.loads(
+        (ROOT / "data" / "context" / "north_sea.json").read_text(encoding="utf-8")
+    )
+    assert any(f["properties"]["name"] == "VOLVE" for f in ctx["fields"]["features"])
+    lon = [p[0] for p in ctx["extent"]]
+    lat = [p[1] for p in ctx["extent"]]
+    assert 1.7 < min(lon) < max(lon) < 2.1 and 58.3 < min(lat) < max(lat) < 58.6
+    assert "NLOD" in ctx["attribution"]
+
+
+def test_stage_includes_the_context_and_the_pages_use_the_furniture(tmp_path):
+    stage.stage(tmp_path / "site")
+    assert (tmp_path / "site" / "data" / "context" / "north_sea.json").exists()
+    view = (SITE / "js" / "host" / "view.js").read_text(encoding="utf-8")
+    assert "drawScaleBar" in view
+    assert 'id="titlebox"' in (SITE / "viewer.html").read_text(encoding="utf-8")

@@ -6,6 +6,7 @@ import { createSurfaceLayer } from "../layers/surface.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { createContactsLayer, loadContacts } from "../layers/contacts.js";
 import { compose, probeAll } from "./view.js";
+import { titleRows, renderTitleBox, drawLocator } from "./titlebox.js";
 import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML, store } from "./ui.js";
 
 initRoot();
@@ -22,9 +23,11 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
 const sets = {};
 let g = null, info = null, layers = [], view = null;
 const faultData = {}, contactData = {};
+let contextData = null;
 
 const getSet = (name) => (sets[name] ??= loadSet(`data/${name}`));
 const getFaults = (name) => (faultData[name] ??= loadFaults(`data/${name}`));
+const getContext = () => (contextData ??= fetch("data/context/north_sea.json").then((r) => { if (!r.ok) throw new Error("no context"); return r.json(); }));
 const getContacts = (name) => (contactData[name] ??= loadContacts(`data/${name}`));
 // the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
 const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
@@ -64,8 +67,21 @@ async function draw() {
   const fl = fd && createFaultLayer(fd, { polygons: ["polygons", "both"].includes(state.faults), sticks: ["sticks", "both"].includes(state.faults), horizon: horizonKey(state.h) });
   if (fl && fl.count) ls.push(fl);
   layers = ls;
-  view = compose($("map"), layers);
+  view = compose($("map"), layers, { furniture: true });
   info = surface.legend();
+  renderTitleBox($("titlebox"), titleRows({ g, bounds: layers[0].bounds(), contour: state.contour, contacts: layers.some((l) => l.id === "contacts") }));
+  const loc = $("titlebox").querySelector(".vs-tb-loc");
+  if (g.manifest.synthetic) loc.replaceChildren(Object.assign(document.createElement("small"), { className: "vs-hint", textContent: "Synthetic data: no real location." }));
+  else {
+    const cd = await getContext().catch(() => null);
+    if (mine !== drawId) return;
+    if (cd) {
+      const c = document.createElement("canvas");
+      c.setAttribute("role", "img"); c.setAttribute("aria-label", "Location map: the Volve field on the Utsira High, North Sea");
+      loc.replaceChildren(c, Object.assign(document.createElement("small"), { className: "vs-hint", textContent: cd.attribution }));
+      drawLocator(c, cd);
+    } else loc.replaceChildren();
+  }
   renderLegend($("legend"), info);
   renderEntries($("entries"), layers.slice(1).flatMap((l) => l.legend()));
   $("facts").innerHTML = factsHTML(layers.flatMap((l, i) => l.facts(i === 0 ? {} : undefined)));

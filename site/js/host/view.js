@@ -1,4 +1,5 @@
 // The one view every layer draws through, and composing layers onto a canvas.
+import { drawScaleBar } from "./furniture.js";
 import { assertSameCrs, CANONICAL_CRS } from "../layers/contract.js";
 
 // A view framing `bounds` [xmin, ymin, xmax, ymax] (metres) at `width` css px across.
@@ -18,7 +19,7 @@ export function sizeCanvas(canvas, view) {
 }
 
 // Draw layers, first to last, onto one canvas. The frame is the first layer's bounds (the surface), so overlays never change the map extent.
-export function compose(canvas, layers, { width = canvas.clientWidth || 640 } = {}) {
+export function compose(canvas, layers, { width = canvas.clientWidth || 640, furniture = false } = {}) {
   assertSameCrs(layers);
   const view = makeView(layers[0].bounds(), width);
   sizeCanvas(canvas, view);
@@ -30,6 +31,7 @@ export function compose(canvas, layers, { width = canvas.clientWidth || 640 } = 
     layer.draw(ctx, view);
     ctx.restore();
   }
+  if (furniture) drawScaleBar(ctx, view);
   return view;
 }
 

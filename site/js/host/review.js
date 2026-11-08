@@ -5,6 +5,7 @@ import { createSurfaceLayer } from "../layers/surface.js";
 import { createContactsLayer, loadContacts } from "../layers/contacts.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { compose } from "./view.js";
+import { titleRows, renderTitleBox } from "./titlebox.js";
 import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML } from "./ui.js";
 
 initRoot();
@@ -108,7 +109,7 @@ for (const s of SECTIONS) {
   for (const c of s.cards) {
     const el = document.createElement("figure");
     el.className = "ss-figure vs-card";
-    el.innerHTML = `<p class="ss-fig-title">${c.title}</p><canvas role="img" aria-label="${c.title}"></canvas><div class="lg"></div><div class="en"></div><p class="vs-note">${c.note || ""}</p><div class="vs-tags">${(c.tags || []).map((t) => `<span class="vs-tag">${t}</span>`).join("")}</div><div class="fx"></div>`;
+    el.innerHTML = `<p class="ss-fig-title">${c.title}</p><canvas role="img" aria-label="${c.title}"></canvas><div class="tb vs-titlebox vs-titlebox-card"></div><div class="lg"></div><div class="en"></div><p class="vs-note">${c.note || ""}</p><div class="vs-tags">${(c.tags || []).map((t) => `<span class="vs-tag">${t}</span>`).join("")}</div><div class="fx"></div>`;
     sec.querySelector(".vs-grid").append(el);
     const card = { ...c, el, visible: false, stale: true };
     el._card = card; cards.push(card);
@@ -146,7 +147,8 @@ async function paint(c) {
       layers.push(createContactsLayer(g, cd, { caseId: c.contacts.case, prepared: layer.prepared(), ...c.contacts.opts }));
       if (c.faults) { const fd = await loadFaults(`data/${setName}`); if (fd) layers.push(createFaultLayer(fd, { polygons: true, sticks: false, horizon: null })); }
     }
-    compose(canvas, layers);
+    compose(canvas, layers, { furniture: true });
+    renderTitleBox(c.el.querySelector(".tb"), titleRows({ g, bounds: layer.bounds(), contour: c.opts?.contour ?? 10, contacts: !!c.contacts }));
     renderLegend(c.el.querySelector(".lg"), layer.legend());
     renderEntries(c.el.querySelector(".en"), layers.slice(1).flatMap((l) => l.legend()));
     c.el.querySelector(".fx").innerHTML = factsHTML(layers.flatMap((l) => l.facts({ short: true })));

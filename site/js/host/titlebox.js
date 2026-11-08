@@ -7,7 +7,7 @@ const fmtN = d3.format(".0f");
 
 // Geostandard map-type names, "Depth structure contour map" and so on; contacts add the hydrocarbon area map.
 export const mapType = (g, withContacts) =>
-  `${g.domain === "twt" ? "Time" : "Depth"} structure contour map${withContacts ? " and hydrocarbon area map" : ""}`;
+  g.id === "thickness" ? "Isochore map" : g.id === "residual" ? "Residual relief map" : `${g.domain === "twt" ? "Time" : "Depth"} structure contour map${withContacts ? " and hydrocarbon area map" : ""}`;
 
 // UTM coverage in the standard's format: "6482150 N-6489275 N, 429650 E-440025 E".
 export const coverage = ([xmin, ymin, xmax, ymax]) => `${fmtN(ymin)} N-${fmtN(ymax)} N, ${fmtN(xmin)} E-${fmtN(xmax)} E`;

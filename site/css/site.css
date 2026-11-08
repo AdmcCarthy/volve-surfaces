@@ -69,3 +69,6 @@ footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
 .vs-tb-rows dd { margin: 0; font: 500 0.8rem var(--ss-font-body); color: var(--ss-text); }
 .vs-tb-loc { flex: 0 0 auto; max-width: 220px; }
 .vs-tb-loc canvas { display: block; }
+.vs-titlebox-card { padding: 6px 8px; margin: 6px 0; }
+.vs-titlebox-card .vs-tb-rows { flex-basis: 100%; grid-template-columns: 1fr; gap: 0 12px; }
+.vs-titlebox-card .vs-tb-rows div { grid-template-columns: 6rem 1fr; }

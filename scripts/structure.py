@@ -21,6 +21,10 @@ import numpy as np
 from scipy import ndimage as ndi
 
 ROOT = Path(__file__).resolve().parent.parent
+CURVE_MARGIN_M = 40.0  # the area curve runs this far below the deepest spill, to show what a deeper contact adds
+CURVE_MIN_RELIEF = (
+    10.0  # area curves are kept for highs with at least this much closure relief
+)
 MIN_RELIEF = 5.0  # metres; a high with less closure relief than this is part of its parent (noise level of the grids)
 
 
@@ -195,6 +199,44 @@ def _wall(s: dict | None, manifest: dict) -> dict | None:
     return {"z": round(s["z"], 1), "xy": [round(x, 1), round(y, 1)], "kind": s["kind"]}
 
 
+def basin_curve(
+    z: np.ndarray, crest: int, limit: float, cell: float, n: int = 60
+) -> dict:
+    """Area against depth of the closure of a high: the connected area at or above each depth, from the crest down to `limit`.
+
+    Priority flood from the crest: every cell gets the shallowest contact depth at which it joins the crest's area (its pass level); the area
+    at depth d is the number of cells with pass level at or below d. Past the spill depth the area includes whatever the closure has merged
+    with, which shows as a jump. A map area, not a volume.
+    """
+    ny, nx = z.shape
+    flat = z.ravel()
+    best = np.full(flat.size, np.inf)
+    best[crest] = flat[crest]
+    heap = [(flat[crest], crest)]
+    levels = []
+    while heap:
+        d, i = heapq.heappop(heap)
+        if d > best[i]:
+            continue
+        levels.append(d)
+        r, c = divmod(i, nx)
+        for rr, cc in ((r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)):
+            if 0 <= rr < ny and 0 <= cc < nx:
+                j = rr * nx + cc
+                if np.isfinite(flat[j]):
+                    nd = max(d, flat[j])
+                    if nd <= limit and nd < best[j]:
+                        best[j] = nd
+                        heapq.heappush(heap, (nd, j))
+    levels = np.sort(np.array(levels))
+    depths = np.linspace(flat[crest], limit, n)
+    areas = np.searchsorted(levels, depths, side="right") * cell * cell / 1e6
+    return {
+        "depth": [round(float(d), 1) for d in depths],
+        "area_km2": [round(float(a), 3) for a in areas],
+    }
+
+
 def closure_record(
     z: np.ndarray, manifest: dict, min_relief: float = MIN_RELIEF
 ) -> dict:
@@ -232,6 +274,16 @@ def closure_record(
                 if s and s["kind"] == "edge"
                 else None,
             }
+        )
+        wall = out[-1]["spill_if_edge_is_wall"]
+        top = (
+            max(s["z"] if s else h["z"] + 100, wall["z"] if wall else 0)
+            + CURVE_MARGIN_M
+        )
+        out[-1]["curve"] = (
+            basin_curve(z, h["crest"], top, manifest["cell"])
+            if (h["relief"] or 0) >= CURVE_MIN_RELIEF
+            else None
         )
     return {"min_relief_m": min_relief, "highs": out}
 

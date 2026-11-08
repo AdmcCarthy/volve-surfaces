@@ -8,6 +8,7 @@
 //   legend()  data only, never DOM: for a surface its classes and range, for vector layers a list of { kind, label, ... } entries.
 //   facts()   title-box rows [{ label, value }], labels as in the Geostandard where it has one.
 //   probe()   what is under a map position (metres), or null: { layer, label, value?, unit? }.
+//   charts()  optional: data for small charts the host draws beside the map (the closures layer: area against depth), never DOM.
 
 export const CANONICAL_CRS = "EPSG:25831"; // ETRS89 / UTM zone 31N
 

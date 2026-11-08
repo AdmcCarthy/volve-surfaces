@@ -1,6 +1,6 @@
 # Contacts and structure: closures, saddles and faults
 
-Status: **steps 1 to 4 built, 2026-11-08** (steps 5 and 6 below, the area-depth chart and the robustness gates, were not asked for and are not built). The Volve fill the viewer draws by default has not changed: it is still the provided outline and barrier. Everything here is an **analysis layer** you switch on.
+Status: **steps 1 to 5 built, 2026-11-08** (the area-against-depth chart was added after steps 1 to 4; the robustness gates of step 6 are not built). The Volve fill the viewer draws by default has not changed: it is still the provided outline and barrier. Everything here is an **analysis layer** you switch on.
 
 Decisions (yours, 2026-11-08): go with steps 1 and 2, then the 19BT2 test, up to step 4 but not 5. **Fault seal analysis is out of scope**: even small faults can be barriers to flow, and sealing depends on things outside this repository. So fault attributes here are measurements (throw, thickness, length, strike) and nothing in the code classes a fault as minor, leaky or sealing. The earlier idea of a "minor fault, never a barrier" class is dropped.
 
@@ -83,6 +83,8 @@ Open points for you: whether "minor" should mean below 10 or 15 m throw; whether
 - Reading: a contact down to 3,146 m needs no barrier (the base case, 3,120 m, does not reach the well). A contact between 3,146 and 3,186 m is compatible with BT2 being water only if something outside the grid separates them; beyond 3,186 m the surface connects them around fault 68. In the PUD distribution about 47 % of cases are deeper than 3,146 m and about a quarter deeper than 3,186 m. **Fault 68 is the candidate separating element**, consistent with the PUD calling BT2 a separate segment, but this is a juxtaposition indicator, not a seal analysis, and the digitised barrier (161 m away) is not the thing that separates them.
 - The two oil wells connect to each other on the surface at 3,010 m: below that the digitised barrier is what keeps the north and south segments apart.
 
-## 8. Not built (as agreed)
+## 8. Area against depth (step 5), and what is not built
 
-Step 5 (the area-against-depth chart) and the robustness gates of section 5. The method of section 5 stays the standard to meet before the tentative tier is allowed to extend the default fill.
+Built: one chart per closure (up to six, the highest relief first) under the map when *Closure analysis* is on: the map area of the connected closure at each contact depth, from the crest to 40 m below its deepest spill, computed by a priority flood on the raw grid (`basin_curve` in `scripts/structure.py`, stored as `curve` in `closures.json`; `site/js/host/areachart.js`). Marked on it: the spill (solid), the spill if the data edge is a limit (dotted), the contacts of the case on show with P90, P50 and P10, and the wells in the closure (oil down to, water top). A jump in the curve is a merge with a neighbouring high; the Volve high's curve jumps at its 3,133 m saddle, and the 19BT2 water top (3,146 m) sits just after it. Map area, not volume. The charts are not in the PNG export yet.
+
+Not built: the robustness gates of section 5. That section stays the standard to meet before the tentative tier is allowed to extend the default fill.

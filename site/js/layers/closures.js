@@ -15,7 +15,8 @@ export async function loadClosures(base) {
 
 const fmt = d3.format(",.0f");
 
-// opts: { horizon (grid id), minRelief (m, highs below it are not drawn), contact (m; draws the closures at that depth, or null) }
+// opts: { horizon (grid id), minRelief (m, highs below it are not drawn), contact (m; draws the closures at that depth, or null),
+//         marks: { contacts: [{ seed: [x, y], lines: [{ depth, label, main }] }], wells: [{ xy, depth, label, fluid }] } to place on the area charts }
 export function createClosuresLayer(g, data, opts = {}) {
   const o = { minRelief: 10, contact: null, ...opts };
   const rec = data.horizons[opts.horizon ?? g.id];
@@ -98,6 +99,35 @@ export function createClosuresLayer(g, data, opts = {}) {
         const w = h.spill_if_edge_is_wall, text = `${h.id} spill ${fmt(h.spill.z)}${edge ? " (data edge)" : ""}${w ? `, ${fmt(w.z)} if the edge is a limit` : ""}`;
         ctx.textAlign = "left"; ctx.strokeStyle = paper; ctx.lineWidth = 3 * dpr; ctx.lineJoin = "round"; ctx.strokeText(text, sx + 9 * dpr, sy); ctx.fillStyle = ink; ctx.fillText(text, sx + 9 * dpr, sy);
       }
+    },
+
+    // area-against-depth charts, one per drawn high: the curve from scripts/structure.py, the spill depths, and the contacts and wells
+    // whose position lies in the closure at the deepest depth of the curve (so a deeper contact that merges closures shows on both)
+    charts() {
+      const flood = (h, limit) => {
+        const s = cellOf(h.crest), seen = new Uint8Array(nx * ny), stack = [s];
+        seen[s] = 1;
+        while (stack.length) {
+          const i = stack.pop(), x = i % nx, y = (i - x) / nx;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const xx = x + dx, yy = y + dy;
+            if (xx < 0 || yy < 0 || xx >= nx || yy >= ny) continue;
+            const j = yy * nx + xx;
+            if (!seen[j] && g.z[j] <= limit) { seen[j] = 1; stack.push(j); }
+          }
+        }
+        return seen;
+      };
+      return highs.filter((h) => h.curve && h.spill).sort((a, b) => b.relief - a.relief).slice(0, 6).map((h) => {
+        const limit = h.curve.depth.at(-1), seen = flood(h, limit), inside = (xy) => { const c = cellOf(xy); return c >= 0 && seen[c]; };
+        const marks = [];
+        for (const c of o.marks?.contacts ?? []) if (inside(c.seed)) marks.push(...c.lines.map((l) => ({ ...l, kind: "contact" })));
+        for (const w of o.marks?.wells ?? []) if (inside(w.xy)) marks.push({ depth: w.depth, label: w.label, kind: w.fluid === "oil" ? "oil" : "water", main: true });
+        marks.push({ depth: h.spill.z, label: h.spill.kind === "edge" ? "spill: data edge" : `spill to ${h.spill.to}`, kind: "spill", main: true });
+        if (h.spill_if_edge_is_wall) marks.push({ depth: h.spill_if_edge_is_wall.z, label: "spill if the edge is a limit", kind: "spill-wall", main: false });
+        const seenMark = new Set(), unique = marks.filter((k) => { const key = `${k.label}|${Math.round(k.depth)}`; return seenMark.has(key) ? false : (seenMark.add(key), true); }); // two segments often share a contact
+        return { id: h.id, title: `${h.id}: crest ${fmt(h.z)} m, relief ${fmt(h.relief)} m`, open: h.spill.kind === "edge", curve: h.curve, crest: h.z, marks: unique };
+      });
     },
 
     legend: () => [

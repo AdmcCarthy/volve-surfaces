@@ -201,6 +201,10 @@ def main(out: Path) -> int:
         ):
             if need not in facts:
                 failures.append(f"facts lack {need!r}")
+        charts = page.locator(".vs-chart").count()
+        if charts < 3:
+            failures.append(f"area charts: {charts}")
+        print(f"area charts: {charts}")
         print(
             "closure and tentative facts present"
             if all(n in facts for n in ("closures", "tentative", "bt2 and the fill"))

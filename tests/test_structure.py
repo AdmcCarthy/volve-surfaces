@@ -117,3 +117,31 @@ def test_real_closures_and_fault_attributes_are_written():
     assert len(measured) >= 0.9 * len(polys) and all(
         x["attrs"]["throw_m"] >= 0 for x in measured
     )
+
+
+def test_area_curve_is_monotonic_and_matches_the_closure_at_its_spill():
+    z = domes()
+    tree = st.merge_tree(z, min_relief=5.0)
+    deep = next(h for h in tree["highs"] if abs(h["z"] - (3000 - 120)) < 5)
+    below = st.basin_curve(z, deep["crest"], deep["spill"]["z"] - 0.01, 25.0)
+    assert (
+        abs(below["area_km2"][-1] - deep["cells"] * 625 / 1e6) < 0.01
+    )  # the closure's own area just under its spill
+    curve = st.basin_curve(z, deep["crest"], deep["spill"]["z"] + 30, 25.0)
+    area = np.array(curve["area_km2"])
+    assert (np.diff(area) >= 0).all() and area[0] < 0.01
+    assert (
+        area[-1] > 1.5 * below["area_km2"][-1]
+    )  # past the saddle it merges with the neighbouring high: the area jumps
+
+
+def test_real_closure_curves_are_written():
+    c = json.loads((DATA / "out" / "closures.json").read_text(encoding="utf-8"))
+    volve = next(
+        h for h in c["horizons"]["hugin_top_depth"]["highs"] if abs(h["z"] - 2802.2) < 1
+    )
+    cv = volve["curve"]
+    assert cv["depth"][-1] > 3133 and len(cv["depth"]) == len(cv["area_km2"])
+    assert (
+        abs(np.interp(3120, cv["depth"], cv["area_km2"]) - 8.4) < 0.4
+    )  # the 8.4 km2 surface-connected area at 3,120 m

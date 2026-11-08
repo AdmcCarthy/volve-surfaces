@@ -6,6 +6,8 @@ import { createSurfaceLayer } from "../layers/surface.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { createContactsLayer, loadContacts } from "../layers/contacts.js";
 import { createClosuresLayer, loadClosures } from "../layers/closures.js";
+import { quantiles } from "../surface/fill.js";
+import { renderAreaCharts } from "./areachart.js";
 import { compose, probeAll } from "./view.js";
 import { sheetCanvas, downloadPng } from "./export.js";
 import { titleRows, renderTitleBox, drawLocator } from "./titlebox.js";
@@ -36,6 +38,19 @@ const getContacts = (name) => (contactData[name] ??= loadContacts(`data/${name}`
 // the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
 const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
 const save = () => history.replaceState(null, "", `#${new URLSearchParams(Object.entries(state).filter(([k, v]) => v !== defaults[k] && v !== null).map(([k, v]) => [k, String(v)])).toString()}`);
+
+// contacts and wells to mark on the closure charts: each contact of the case on show (with its P90, P50, P10 when it has a distribution), and the wells
+const closureMarks = (layer, cd) => {
+  if (!layer || !cd) return null;
+  const kase = layer.caseUsed;
+  return {
+    contacts: cd.segments.map((s) => ({ seed: s.seed, lines: kase.contacts.filter((c) => !c.segment || c.segment === s.id).flatMap((c) => [
+      { depth: c.depth, label: c.kind, main: true },
+      ...(c.distribution ? Object.entries(quantiles(c.distribution)).map(([k, d]) => ({ depth: d, label: k, main: false })) : []),
+    ]) })),
+    wells: (cd.evidence ?? []).map((e) => ({ xy: e.xy, fluid: e.fluid, depth: e.fluid === "oil" ? e.base : e.top, label: `${e.well.replace(/^NO 15\/9-/, "").replace(" ", "")} ${e.fluid === "oil" ? "ODT" : "water"}` })),
+  };
+};
 
 let drawId = 0; // a draw that is overtaken by a newer one stops, so slow loads never overwrite the page with stale layers
 async function draw() {
@@ -71,7 +86,7 @@ async function draw() {
   if (mine !== drawId) return;
   const contactsLayer = ls.find((l) => l.id === "contacts");
   const baseContact = contactsLayer ? Math.max(...contactsLayer.fill.segments.filter((s) => s.model && !s.empty).map((s) => s.model.likely)) : null;
-  const clLayer = cl && g.domain === "depth" && cl.horizons[state.h] ? createClosuresLayer(g, cl, { horizon: state.h, contact: Number.isFinite(baseContact) ? baseContact : null }) : null;
+  const clLayer = cl && g.domain === "depth" && cl.horizons[state.h] ? createClosuresLayer(g, cl, { horizon: state.h, contact: Number.isFinite(baseContact) ? baseContact : null, marks: closureMarks(contactsLayer, cd) }) : null;
   $("f-closures-note").textContent = state.closures !== "on" ? "" : g.domain !== "depth" ? "Closures are found on the depth maps: choose a depth horizon." : !clLayer ? "No closure analysis for this data set or horizon." : "";
   if (clLayer) ls.push(clLayer);
   const fd = state.faults === "off" ? null : await getFaults(state.set).catch(() => null);
@@ -95,6 +110,7 @@ async function draw() {
       drawLocator(c, cd, cd.baseData);
     } else loc.replaceChildren();
   }
+  renderAreaCharts($("charts"), clLayer ? clLayer.charts() : []);
   renderLegend($("legend"), info);
   renderEntries($("entries"), layers.slice(1).flatMap((l) => l.legend()));
   $("facts").innerHTML = factsHTML(layers.flatMap((l, i) => l.facts(i === 0 ? {} : undefined)));

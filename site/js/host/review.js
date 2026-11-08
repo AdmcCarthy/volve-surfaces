@@ -1,7 +1,8 @@
 // Review page: one horizon under many treatments, painted lazily, repainted when the scheme or data set changes.
-import { loadSet, loadGrid, blur, derived, extent, autoStep } from "./grid.js";
-import { RAMPS, stopsOf } from "./ramps.js";
-import { renderMap } from "./render.js";
+import { loadSet, loadGrid, blur, derived, extent, autoStep } from "../surface/grid.js";
+import { RAMPS, stopsOf } from "../style/ramps.js";
+import { createSurfaceLayer } from "../layers/surface.js";
+import { compose } from "./view.js";
 import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, factsHTML } from "./ui.js";
 
 initRoot();
@@ -120,10 +121,11 @@ async function paint(c) {
   try {
     const g = await gridFor(c.h), seq = RAMPS[c.ramp].kind === "seq";
     const [lo, hi] = extent(g.z);
-    const info = renderMap(canvas, g, { fill: "stepped", step: autoStep(lo, hi), classes: 9, ...FINE, contour: 10, shade: 0,
+    const layer = createSurfaceLayer(g, { fill: "stepped", step: autoStep(lo, hi), classes: 9, ...FINE, contour: 10, shade: 0,
       ...c.opts, stops: stopsOf(c.ramp) });
-    renderLegend(c.el.querySelector(".lg"), info);
-    c.el.querySelector(".fx").innerHTML = factsHTML(info, g, { short: true });
+    compose(canvas, [layer]);
+    renderLegend(c.el.querySelector(".lg"), layer.legend());
+    c.el.querySelector(".fx").innerHTML = factsHTML(layer.facts({ short: true }));
     $("attr").textContent = g.manifest.synthetic ? g.manifest.attribution : ATTRIBUTION;
   } catch (e) {
     c.el.querySelector(".fx").textContent = `Could not draw: ${e.message}`;

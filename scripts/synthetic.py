@@ -73,6 +73,29 @@ def fault_offset(u, v, p0, p1, throw, width=40.0):
     return throw * taper * step, dist, taper
 
 
+# the two normal faults of surfaces(), end points in rotated metres (u, v); throw is down to the left of p0 -> p1
+FAULTS = {"F1": ((-1800, -1700), (500, 1500)), "F2": ((900, -1900), (1500, 1800))}
+
+
+def faults_record() -> dict:
+    """The synthetic faults as normalised records (docs/modules.md): known type and downthrown side, in the same frame."""
+    xc, yc, c, s = X0 + NX * CELL / 2, Y0 - NY * CELL / 2, np.cos(ANGLE), np.sin(ANGLE)
+
+    def to_xy(u, v):
+        return [
+            round(float(xc + c * u - s * v), 1),
+            round(float(yc + s * u + c * v), 1),
+        ]
+
+    feats = [
+        {"id": f"trace:synthetic:{k}", "kind": "trace", "name": f"Synthetic fault {k}", "type": "normal", "certainty": "certain",
+         "downthrown": "left", "domain": "depth", "xy": [to_xy(*p0), to_xy(*p1)]}
+        for k, (p0, p1) in FAULTS.items()
+    ]  # fmt: skip
+    return {"crs": CRS, "source_crs": None, "synthetic": True, "attribution": ATTRIBUTION,
+            "note": "Invented fault traces, with type and downthrown side as the generator made them.", "features": feats}  # fmt: skip
+
+
 def surfaces(seed: int = 7):
     """Depth surfaces (m, positive down) per layer and the fault-gap mask; all shape (NY, NX)."""
     rng = np.random.default_rng(seed)
@@ -89,12 +112,8 @@ def surfaces(seed: int = 7):
         + 35 * (u / 1000)
         + 25 * (v / 1000)
     )
-    f1, d1, tp1 = fault_offset(
-        u, v, (-1800, -1700), (500, 1500), throw=1.0
-    )  # main fault, down to the east
-    f2, _d2, tp2 = fault_offset(
-        u, v, (900, -1900), (1500, 1800), throw=1.0
-    )  # smaller antithetic fault
+    f1, d1, tp1 = fault_offset(u, v, *FAULTS["F1"], throw=1.0)  # main fault
+    f2, _d2, tp2 = fault_offset(u, v, *FAULTS["F2"], throw=1.0)  # smaller fault
 
     z, gap = {}, np.zeros(u.shape, bool)
     # layer: (mean depth, structural gain, fault throw m, noise m)
@@ -186,6 +205,9 @@ def build(out_dir: str = "data/synthetic", seed: int = 7) -> None:
         "horizons": entries,
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
+    (out / "faults.json").write_text(
+        json.dumps(faults_record(), separators=(",", ":")), encoding="utf-8"
+    )
 
 
 if __name__ == "__main__":

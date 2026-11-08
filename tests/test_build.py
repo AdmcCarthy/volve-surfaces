@@ -4,7 +4,7 @@ from pathlib import Path
 import build
 import numpy as np
 import pytest
-from volve_io import parse_sections
+from adapters.volve.horizons import parse_sections
 
 OUT = Path(__file__).parent.parent / "data" / "out"
 

@@ -34,6 +34,7 @@
     <div class="vs-field"><span id="l-contour">Contour lines</span><div id="c-contour"></div></div>
     <div class="vs-field"><span>Shading</span><div id="c-shade"></div></div>
     <div class="vs-field" id="f-light"><span>Shading light</span><div id="c-light"></div></div>
+    <div class="vs-field"><span>Faults</span><div id="c-faults"></div><small class="vs-hint" id="f-faults-note"></small></div>
   </aside>
   <section>
     <figure class="ss-figure vs-fig" id="fig">
@@ -41,6 +42,7 @@
       <figcaption><p class="ss-fig-title" id="title"></p><p class="ss-fig-sub" id="sub"></p></figcaption>
       <div style="position:relative"><canvas id="map" role="img" aria-label="Contour map of the selected horizon"></canvas><div class="vs-read" id="read"></div></div>
       <div id="legend"></div>
+      <div id="entries"></div>
       <div id="facts"></div>
     </figure>
   </section>
@@ -50,6 +52,6 @@
   <p id="attr"></p>
   <p>Not connected with, sponsored or endorsed by Equinor or the former Volve licence partners. Provided as is, with no warranty; the data may contain errors and omissions. Maps are smoothed for readability and are not for engineering decisions. Colours: <a href="https://github.com/AdmcCarthy/SubScout">SubScout</a> tokens (MIT; method from the Equinor Design System palette generator, MIT).</p>
 </footer>
-<script type="module" src="js/viewer.js"></script>
+<script type="module" src="js/host/viewer.js"></script>
 </body>
 </html>

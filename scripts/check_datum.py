@@ -15,9 +15,9 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from adapters.volve.wells import parse_picks
 from crs import convert
 from scipy.ndimage import map_coordinates
-from volve_wells import parse_picks
 
 PAIRS = {  # pick surface name -> (horizon id, domain)
     "Seabed": "seabed_depth",

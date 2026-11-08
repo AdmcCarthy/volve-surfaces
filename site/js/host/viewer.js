@@ -1,14 +1,17 @@
 // Interactive viewer: one horizon, controls on the left, state kept in the URL hash.
-import { loadSet, loadGrid, extent, autoStep } from "./grid.js";
-import { stopsOf, RAMPS } from "./ramps.js";
-import { renderMap, probe } from "./render.js";
-import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, factsHTML, rangeNote, store } from "./ui.js";
+import { loadSet, loadGrid, extent, autoStep } from "../surface/grid.js";
+import { rangeNote } from "../surface/describe.js";
+import { stopsOf, RAMPS } from "../style/ramps.js";
+import { createSurfaceLayer } from "../layers/surface.js";
+import { createFaultLayer, loadFaults } from "../layers/faults.js";
+import { compose, probeAll } from "./view.js";
+import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML, store } from "./ui.js";
 
 initRoot();
 const $ = (id) => document.getElementById(id);
 // Detail: how the surface is prepared for display. Smoothing is edge-preserving (fault steps are kept) and stated on the map.
 const DETAIL = { raw: { sigmaM: 0, upsample: 1 }, light: { sigmaM: 0, upsample: 2 }, fine: { sigmaM: 25, upsample: 2 }, medium: { sigmaM: 50, upsample: 2 } };
-const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto" };
+const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off" };
 const NUM = new Set(["contour", "shade", "min", "max"]);
 const state = { ...defaults };
 for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
@@ -16,9 +19,13 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
   state[k] = NUM.has(k) || (k === "step" && v !== "auto") ? Number(v) : v;
 }
 const sets = {};
-let g = null, info = null;
+let g = null, info = null, layers = [], view = null;
+const faultData = {};
 
 const getSet = (name) => (sets[name] ??= loadSet(`data/${name}`));
+const getFaults = (name) => (faultData[name] ??= loadFaults(`data/${name}`));
+// the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
+const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
 const save = () => history.replaceState(null, "", `#${new URLSearchParams(Object.entries(state).filter(([k, v]) => v !== defaults[k] && v !== null).map(([k, v]) => [k, String(v)])).toString()}`);
 
 async function draw() {
@@ -34,10 +41,18 @@ async function draw() {
     return;
   }
   const [lo, hi] = extent(g.z), step = state.step === "auto" ? autoStep(lo, hi) : state.step;
-  info = renderMap($("map"), g, { fill: state.fill, stops: stopsOf(state.ramp), step, min: state.min, max: state.max,
+  const surface = createSurfaceLayer(g, { fill: state.fill, stops: stopsOf(state.ramp), step, min: state.min, max: state.max,
     ...DETAIL[state.detail], contour: state.contour, shade: state.shade, light: state.light });
+  layers = [surface];
+  const fd = state.faults === "off" ? null : await getFaults(state.set).catch(() => null);
+  const fl = fd && createFaultLayer(fd, { polygons: ["polygons", "both"].includes(state.faults), sticks: ["sticks", "both"].includes(state.faults), horizon: horizonKey(state.h) });
+  if (fl && fl.count) layers.push(fl);
+  view = compose($("map"), layers);
+  info = surface.legend();
   renderLegend($("legend"), info);
-  $("facts").innerHTML = factsHTML(info, g);
+  renderEntries($("entries"), layers.slice(1).flatMap((l) => l.legend()));
+  $("facts").innerHTML = factsHTML(layers.flatMap((l, i) => l.facts(i === 0 ? {} : undefined)));
+  $("f-faults-note").textContent = state.faults !== "off" && fd && !(fl && fl.count) ? "No fault polygons for this horizon: choose Sticks or Both, or a Hugin horizon." : "";
   // range inputs show the colour range in force (the data range rounded to the step unless set by hand)
   $("i-min").value = info.range.lo; $("i-max").value = info.range.hi; $("i-min").step = $("i-max").step = step;
   $("h-range").textContent = rangeNote(info) || (info.range.auto ? `Data range ${d3.format(",.1f")(info.range.dataMin)} to ${d3.format(",.1f")(info.range.dataMax)} ${g.unit}, rounded to the step.` : "");
@@ -59,6 +74,7 @@ bind("c-detail", "detail", [["raw", "Raw"], ["light", "Light"], ["fine", "Fine"]
 bind("c-contour", "contour", [[0, "None"], [10, "10"], [20, "20"], [50, "50"]], true);
 bind("c-shade", "shade", [[0, "Off"], [0.5, "Soft"], [1, "Strong"]], true);
 bind("c-light", "light", [["auto", "Across faults"], ["nw", "North-west"]]);
+bind("c-faults", "faults", [["off", "Off"], ["polygons", "Polygons"], ["sticks", "Sticks"], ["both", "Both"]]);
 const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); draw(); });
 
 // colour range: typed values are kept until Reset or a new horizon
@@ -82,13 +98,14 @@ async function fillHorizons() {
 $("c-h").addEventListener("change", (e) => { state.h = e.target.value; state.min = state.max = null; draw(); });
 $("c-set").addEventListener("click", async () => { state.min = state.max = null; await fillHorizons(); draw(); });
 
-// readout under the pointer (raw value, not the smoothed one)
+// readout under the pointer: the raw surface value (not the smoothed one) and any fault within 30 m
 const read = $("read");
 $("map").addEventListener("pointermove", (e) => {
-  if (!g || !info) return;
-  const p = probe(g, info, e.offsetX, e.offsetY);
-  if (Number.isNaN(p.z)) { read.classList.remove("on"); return; }
-  read.textContent = `${d3.format(",.1f")(p.z)} ${g.unit} · E ${d3.format(",.0f")(p.easting)} N ${d3.format(",.0f")(p.northing)}`;
+  if (!view) return;
+  const [x, y] = view.unproject(e.offsetX, e.offsetY), hits = probeAll(layers, x, y);
+  const s = hits.find((h) => h.layer === "surface"), f = hits.find((h) => h.layer === "faults");
+  if (!s) { read.classList.remove("on"); return; }
+  read.textContent = `${d3.format(",.1f")(s.value)} ${s.unit} · E ${d3.format(",.0f")(x)} N ${d3.format(",.0f")(y)}${f ? ` · ${f.label}` : ""}`;
   read.classList.add("on");
 });
 $("map").addEventListener("pointerleave", () => read.classList.remove("on"));

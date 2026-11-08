@@ -1,7 +1,7 @@
 // Draws one grid onto a canvas: linear gradient or stepped (stacked contour polygons) fill, optional contour lines and
 // soft shading. Returns what the legend and the "generalised for display" badge need.
 import { blur, edgePreserve, upsample, deviation, dilate, extent, classEdges, stepEdges } from "./grid.js";
-import { classColours, lut, token } from "./ramps.js";
+import { classColours, lut, token } from "../style/ramps.js";
 import { faultTrend } from "./trend.js";
 
 const NEG = -1e9; // nodata value for contouring, far below every threshold
@@ -52,6 +52,15 @@ function hillshade(z, nx, ny, cell, ve, strength, sources) {
   return img;
 }
 
+// The valid area of a grid in metres [xmin, ymin, xmax, ymax], with a margin of six cells: what a host frames.
+export function surfaceBounds(g) {
+  const { nx, ny, cell } = g;
+  let x0 = nx, x1 = 0, y0 = ny, y1 = 0;
+  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) if (!Number.isNaN(g.z[y * nx + x])) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  x0 = Math.max(0, x0 - 6); y0 = Math.max(0, y0 - 6); x1 = Math.min(nx, x1 + 7); y1 = Math.min(ny, y1 + 7);
+  return [g.x0 + x0 * cell, g.y0 - y1 * cell, g.x0 + x1 * cell, g.y0 - y0 * cell];
+}
+
 // Options
 //   fill      "linear" | "stepped"
 //   stops     colour stops, low to high
@@ -61,9 +70,12 @@ function hillshade(z, nx, ny, cell, ve, strength, sources) {
 //   upsample  1 or 2: contour on a bicubic grid 2x denser (values unchanged, lines lose the 25 m stair-steps)
 //   contour   contour interval in data units, 0 = none (every 5th drawn heavier)
 //   shade     0 | 0.5 | 1; light "auto" (across the fault trend) or "nw" (315 degrees)
-export function renderMap(canvas, g, opts = {}) {
+//
+// Draws one grid into `ctx` through `view` (see host/view.js): { x0, y0 (north-west corner, metres), scale (css px per metre),
+// width, height (css px), dpr }. It never sizes or clears the canvas; the host does, so other layers can share the view.
+export function drawSurface(ctx, g, view, opts = {}) {
   const o = { fill: "stepped", stops: [], step: null, min: null, max: null, classes: 9, method: "nice", edges: null, sigmaM: 0,
-    smoother: "edge", upsample: 1, contour: 0, shade: 0, light: "auto", ve: 5, diverging: false, width: null, ...opts };
+    smoother: "edge", upsample: 1, contour: 0, shade: 0, light: "auto", ve: 5, diverging: false, ...opts };
   const { nx, ny, cell } = g;
   const sc = o.sigmaM / cell;
   const smooth = o.sigmaM > 0 ? (o.smoother === "gaussian" ? blur(g.z, nx, ny, sc) : edgePreserve(g.z, nx, ny, sc)) : g.z;
@@ -71,15 +83,10 @@ export function renderMap(canvas, g, opts = {}) {
   const grid = dilate(smooth, nx, ny, 3);
   const fine = upsample(grid, nx, ny, o.upsample), U = fine.u;
 
-  // crop to the valid area, with a small margin
-  let x0 = nx, x1 = 0, y0 = ny, y1 = 0;
-  for (let y = 0; y < ny; y++) for (let x = 0; x < nx; x++) if (!Number.isNaN(g.z[y * nx + x])) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-  x0 = Math.max(0, x0 - 6); y0 = Math.max(0, y0 - 6); x1 = Math.min(nx, x1 + 7); y1 = Math.min(ny, y1 + 7);
-  const cw = x1 - x0, ch = y1 - y0;
-  const cssW = o.width ?? (canvas.clientWidth || 640), dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const k = cssW / cw, px = k * dpr;
-  canvas.width = Math.round(cw * px); canvas.height = Math.round(ch * px);
-  canvas.style.aspectRatio = `${cw} / ${ch}`;
+  const dpr = view.dpr, ps = view.scale * dpr; // device px per metre
+  const pc = ps * cell; // device px per grid cell
+  const tx = (g.x0 - view.x0) * ps, ty = (view.y0 - g.y0) * ps; // grid origin in device px
+  const W = Math.round(view.width * dpr), H = Math.round(view.height * dpr);
 
   // colour range and class edges
   const ext = extent(smooth);
@@ -95,12 +102,10 @@ export function renderMap(canvas, g, opts = {}) {
     domain = [o.min ?? ext[0], o.max ?? ext[1]];
   }
 
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const toGrid = () => ctx.setTransform(px, 0, 0, px, -x0 * px, -y0 * px);
+  const toGrid = () => ctx.setTransform(pc, 0, 0, pc, tx, ty);
   // contour coordinates of the denser grid: node I sits at X = I + 0.5, which is original position (X - 0.5) / U + 0.5
-  const toFine = () => ctx.setTransform(px / U, 0, 0, px / U, (0.5 - 0.5 / U - x0) * px, (0.5 - 0.5 / U - y0) * px);
+  const sh = (0.5 - 0.5 / U) * pc;
+  const toFine = () => ctx.setTransform(pc / U, 0, 0, pc / U, tx + sh, ty + sh);
   const path = d3.geoPath(null, ctx);
 
   const mask = new Float32Array(g.z.length);
@@ -114,12 +119,15 @@ export function renderMap(canvas, g, opts = {}) {
   if (o.fill === "linear") {
     const L = lut(o.stops), [d0, d1] = domain, span = d1 - d0 || 1;
     const off = document.createElement("canvas");
-    off.width = canvas.width; off.height = canvas.height;
-    const octx = off.getContext("2d"), img = octx.createImageData(off.width, off.height), W = off.width, H = off.height;
+    off.width = W; off.height = H;
+    const octx = off.getContext("2d"), img = octx.createImageData(W, H);
+    // fine-grid position of every device column and row, from metres through the view
+    const us = Float64Array.from({ length: W }, (_, X) => ((view.x0 + (X + 0.5) / ps - g.x0) / cell - 0.5) * U);
+    const vs = Float64Array.from({ length: H }, (_, Y) => ((g.y0 - view.y0 + (Y + 0.5) / ps) / cell - 0.5) * U);
     for (let Y = 0; Y < H; Y++) {
-      const v = ((Y + 0.5) / px + y0 - 0.5) * U, j = Math.floor(v), fy = v - j;
+      const v = vs[Y], j = Math.floor(v), fy = v - j;
       for (let X = 0; X < W; X++) {
-        const u = ((X + 0.5) / px + x0 - 0.5) * U, i = Math.floor(u);
+        const u = us[X], i = Math.floor(u);
         const val = bilinear(fine.z, fine.nx, fine.ny, i, j, u - i, fy);
         if (Number.isNaN(val)) continue;
         const c = L[Math.max(0, Math.min(255, Math.round(((val - d0) / span) * 255)))], p = (Y * W + X) * 4;
@@ -158,23 +166,23 @@ export function renderMap(canvas, g, opts = {}) {
     ctx.strokeStyle = token("--ss-text"); ctx.lineJoin = "round";
     contours(th).forEach((c) => {
       const index = Math.round(c.value / step) % 5 === 0;
-      ctx.globalAlpha = index ? 0.6 : 0.28; ctx.lineWidth = ((index ? 1.15 : 0.6) * dpr * U) / px;
+      ctx.globalAlpha = index ? 0.6 : 0.28; ctx.lineWidth = ((index ? 1.15 : 0.6) * dpr * U) / pc;
       ctx.beginPath(); path(c); ctx.stroke();
     });
     ctx.restore();
   }
 
   ctx.save(); toGrid();
-  ctx.strokeStyle = token("--ss-border"); ctx.lineWidth = dpr / px; ctx.beginPath(); path(foot); ctx.stroke();
+  ctx.strokeStyle = token("--ss-border"); ctx.lineWidth = dpr / pc; ctx.beginPath(); path(foot); ctx.stroke();
   ctx.restore();
 
   return { fill: o.fill, stops: o.stops, edges, colours: cols, domain, range, unit: g.unit, method: o.diverging ? "sym" : o.method, step: o.step && !o.diverging ? o.step : null,
-    sigmaM: o.sigmaM, smoother: o.smoother, upsample: U, dev, contour: o.contour || null, shade: o.shade, trend, lights, lightMode: o.light, view: { x0, y0, k } };
+    sigmaM: o.sigmaM, smoother: o.smoother, upsample: U, dev, contour: o.contour || null, shade: o.shade, trend, lights, lightMode: o.light };
 }
 
-// Raw (unsmoothed) value and UTM position under a pointer, in CSS px relative to the canvas.
-export function probe(g, info, cssX, cssY) {
-  const { x0, y0, k } = info.view, gx = cssX / k + x0, gy = cssY / k + y0;
+// Raw (unsmoothed) value at a map position in metres, or NaN where there is no surface.
+export function probeSurface(g, x, y) {
+  const gx = (x - g.x0) / g.cell, gy = (g.y0 - y) / g.cell;
   const u = gx - 0.5, v = gy - 0.5, i = Math.floor(u), j = Math.floor(v);
-  return { z: bilinear(g.z, g.nx, g.ny, i, j, u - i, v - j), easting: g.x0 + gx * g.cell, northing: g.y0 - gy * g.cell };
+  return bilinear(g.z, g.nx, g.ny, i, j, u - i, v - j);
 }

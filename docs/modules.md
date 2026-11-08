@@ -82,22 +82,22 @@ Canonical is **EPSG:25831**. Measured here with pyproj 3.8 (offline, all grids p
 - Convert only through `scripts/crs.py`. pyproj's default reverse transform (25831 to 23031) picks a coarser operation and lands about 90 m from the inverse of the one used here; a test guards this.
 - A layer that is handed another CRS is an error, not a silent reprojection.
 
-## Where things go (target layout)
+## Where things go (as built 2026-11-08)
 
 ```
 site/js/
-  surface/      grid.js  render.js  trend.js            surface layer (today: site/js/*.js)
-  layers/       faults.js  wells.js  contract.md       vector and well layers, same contract
-  host/         viewer.js  review.js  titlebox.js  scalebar.js  legend.js
-  vendor/subscout/   tokens.css  base.css  symbols.js  symbols.json     copied unchanged, with NOTICE and commit hash
+  surface/      grid.js  render.js (drawSurface, surfaceBounds, probeSurface)  trend.js  describe.js     the surface module: no layers, no host
+  layers/       contract.js  surface.js  faults.js          layers meeting the contract; they never import each other or the host
+  host/         viewer.js  review.js  view.js  ui.js        compose layers on one view; theme, controls, legend, facts rendering
+  style/        ramps.js                                    reads SubScout tokens at draw time
+  vendor/subscout/   symbols.js  symbols-data.js  symbols.json  NOTICE.md     copied unchanged, with the source commit
 scripts/
-  adapters/volve/    parse horizons, well picks and perforations, fault sticks and polygons -> records, EPSG:23031 -> 25831
-  adapters/sodir/    FactPages wellbores, installations (shared with Wildcat's fetch_sodir.py)
-  surface/           build_grid.py (generic: picks -> grid, no Volve names), synthetic.py
+  adapters/volve/    horizons.py  wells.py  faults.py       parse a source, convert ED50 -> ETRS89 (scripts/crs.py), write records
+  crs.py  build.py  synthetic.py  check_datum.py  inventory.py  smoke.py  stage.py
 ```
 
-Today's files map as follows: `grid.js`, `render.js`, `trend.js` are the surface layer; `ramps.js` is a thin reader of SubScout tokens and moves to `vendor/subscout`; `ui.js` splits into
-legend, facts (the title box) and generic helpers; `viewer.js` and `review.js` are hosts; `scripts/build.py` splits into `adapters/volve` (names, files, CRS) and a generic gridder.
+`tests/test_site.py` checks the dependency direction; `scripts/smoke.py` runs the shared layer contract in a browser (every layer: crs
+asserted, bounds, draw into a shared view, legend, facts, probe; an empty layer; a layer in ED50 is refused).
 
 ### What SubScout gets
 
@@ -123,8 +123,8 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 ## Roadmap
 
 0. **Done (2026-11-08): prerequisites.** Picks are converted to ETRS89 in the build (`scripts/crs.py`) and the grids rebuilt, manifests say EPSG:25831 and record the transformation. The horizon depth datum is verified against the well picks' TVDSS: mean sea level, positive down ([datum-check.md](datum-check.md)).
-1. **Refactor this repo** to the layout above with the contract, no change in what the pages show. Add the shared contract test.
-2. **Faults as a vector layer**, from the Volve sticks and polygons, Geostandard line styles, black via `--ss-text`. Only plain and uncertain lines until type is known.
+1. **Done (2026-11-08): refactor.** The layout above, the contract, `host/view.js` (one view, `compose`), and the shared contract test in `scripts/smoke.py`. The pages draw as before.
+2. **Done (2026-11-08): faults as a vector layer**, from the Volve sticks (1,356) and fault polygons (78 top, 72 base Hugin), black via `--ss-text`, plain lines because the files carry names only. Normal-fault ticks are implemented and shown on the synthetic faults, whose type and downthrown side are known.
 3. **SubScout symbols spec**: open as [SubScout PR #1](https://github.com/AdmcCarthy/SubScout/pull/1): style guide page, `symbols.toml`, generator, runtime, review sheet, tests, CI. Merge, then vendor `symbols.js` and `symbols-data.js` here with a NOTICE and the commit hash.
 4. **Wells**: the Volve adapter (well picks, perforations; names parsed per 3.2), the Sodir adapter for status and fluid, the well layer using SubScout symbols; wells over a surface, with the datum check.
 5. **Title box, scale bar and location map** as host components, fields exactly per the Geostandard.

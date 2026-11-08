@@ -16,10 +16,10 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from adapters.volve.horizons import read_horizon
 from crs import CANONICAL, convert
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import cKDTree
-from volve_io import read_horizon
 
 CELL = 25.0  # metres
 HOLE = 60.0  # cells further than this from any pick are nodata

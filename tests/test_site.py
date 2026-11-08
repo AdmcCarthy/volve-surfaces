@@ -5,7 +5,11 @@ import stage
 
 ROOT = Path(__file__).parent.parent
 SITE = ROOT / "site"
-OWN = [*SITE.glob("*.html"), *SITE.glob("js/*.js"), SITE / "css" / "site.css"]
+OWN = [
+    *SITE.glob("*.html"),
+    *(p for p in SITE.glob("js/**/*.js") if "vendor" not in p.parts),
+    SITE / "css" / "site.css",
+]
 
 
 def test_no_raw_hex_colours_outside_the_vendored_tokens():
@@ -32,7 +36,7 @@ def test_pages_pin_d3_and_carry_attribution_and_disclaimer():
         html = (SITE / page).read_text(encoding="utf-8")
         assert "d3/7.9.0/d3.min.js" in html
         assert "not connected with, sponsored or endorsed by equinor" in html.lower()
-    assert "Equinor ASA" in (SITE / "js" / "ui.js").read_text(encoding="utf-8")
+    assert "Equinor ASA" in (SITE / "js" / "host" / "ui.js").read_text(encoding="utf-8")
 
 
 def test_stage_assembles_site_and_both_data_sets(tmp_path):
@@ -48,4 +52,34 @@ def test_strongest_colour_is_not_an_option_and_ten_metre_lines_are_default():
         assert "emph" not in f.read_text(encoding="utf-8").lower().replace(
             "emphasis", ""
         ), f.name
-    assert "contour: 10" in (SITE / "js" / "viewer.js").read_text(encoding="utf-8")
+    assert "contour: 10" in (SITE / "js" / "host" / "viewer.js").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_vendored_subscout_symbols_carry_a_notice_with_the_source_commit():
+    v = SITE / "js" / "vendor" / "subscout"
+    assert {p.name for p in v.iterdir()} >= {
+        "symbols.js",
+        "symbols-data.js",
+        "symbols.json",
+        "NOTICE.md",
+    }
+    assert re.search(
+        r"commit [0-9a-f]{40}", (v / "NOTICE.md").read_text(encoding="utf-8")
+    )
+
+
+def test_modules_are_separate_surface_never_imports_layers_or_host():
+    # dependency direction (docs/modules.md): host -> layers -> surface and style; never the other way
+    for f in (SITE / "js" / "surface").glob("*.js"):
+        assert not re.search(
+            r'from "\.\./(layers|host)/', f.read_text(encoding="utf-8")
+        ), f.name
+    for f in (SITE / "js" / "layers").glob("*.js"):
+        assert "../host/" not in f.read_text(encoding="utf-8"), f.name
+    surface = (SITE / "js" / "layers" / "surface.js").read_text(encoding="utf-8")
+    faults = (SITE / "js" / "layers" / "faults.js").read_text(encoding="utf-8")
+    assert (
+        "surface/" not in faults and "faults" not in surface
+    )  # layers never import each other

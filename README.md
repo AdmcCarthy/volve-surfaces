@@ -8,6 +8,7 @@ Status: data pipeline and first viewer done. **Style options (editorial review):
 uv sync --all-groups
 uv run python scripts/inventory.py path/to/Volve_Geophysical_Interpretations.zip docs/inventory.md
 uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip   # -> data/out (11 Volve grids + manifest.json)
+PYTHONPATH=scripts uv run python -m adapters.volve.faults path/to/Volve_Geophysical_Interpretations.zip   # -> data/out/faults.json (ETRS89)
 uv run python scripts/synthetic.py                                               # -> data/synthetic (same format, invented geology)
 uv run pytest
 uv run python scripts/stage.py && python -m http.server -d _site 8000   # preview the site locally

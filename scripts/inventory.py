@@ -33,6 +33,13 @@ def horizon_stats(name: str, raw: bytes) -> dict:
     hdr = header_lines(raw)
     lines = raw.splitlines()
     meta = [ln.decode("latin-1").strip() for ln in lines if ln.strip() and not ln.startswith(b"#") and not ROW.match(ln)]
+    sections, prev_row = 1, False
+    for ln in lines:
+        is_row = bool(ROW.match(ln))
+        if prev_row and not is_row and ln.strip() and not ln.startswith(b"#") and ln.strip() != b",":
+            sections += 1
+        if ln.strip():
+            prev_row = is_row
     body = b"\n".join(ln for ln in lines if ROW.match(ln))
     df = pd.read_csv(io.BytesIO(body), header=None, names=["il", "xl", "x", "y", "z"], dtype=float)
     z = df["z"]

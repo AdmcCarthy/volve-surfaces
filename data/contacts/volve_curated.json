@@ -1,0 +1,295 @@
+{
+ "_about": "Curated, cited hydrocarbon contacts for the Volve Hugin reservoir. Everything here is read from the Volve reports (Reports.zip); nothing is invented. Figure pixel coordinates are in the embedded image of PUD Figure 4.1 (460 x 279 px, u right, v down).",
+ "reservoir": "Hugin Fm",
+ "horizon": "hugin_top",
+ "datum": "m below mean sea level, positive down (same as the horizons; see docs/datum-check.md)",
+ "georeference": {
+  "figure": "Volve PUD, Plan for utbygging og drift av Volve, February 2005, Figure 4.1, printed p. 22 (PDF page 22), the reservoir simulation grid with the 'Dynamisk Barriere'",
+  "control_points": [
+   {
+    "well": "NO 15/9-19 SR",
+    "surface": "Hugin Fm. VOLVE Top",
+    "px": [
+     193,
+     114
+    ],
+    "note": "lower end of the green well marker"
+   },
+   {
+    "well": "NO 15/9-19 A",
+    "surface": "Hugin Fm. VOLVE Top",
+    "px": [
+     352,
+     122
+    ],
+    "note": "lower end of the green well marker"
+   }
+  ],
+  "method": "A similarity transform (scale, rotation, shift; north not assumed) from the two wells' Hugin top pick positions. The figure has no coordinates, so the outline and barrier are placed to about 150 to 250 m. Checked by eye: the transformed active area lies on the fault-bounded Volve block and along the 3,120 m contour.",
+  "accuracy_m": 250
+ },
+ "outline_px": [
+  [
+   27.0,
+   274.0
+  ],
+  [
+   22.0,
+   135.0
+  ],
+  [
+   38.0,
+   113.0
+  ],
+  [
+   172.0,
+   23.0
+  ],
+  [
+   217.0,
+   26.0
+  ],
+  [
+   263.0,
+   43.0
+  ],
+  [
+   316.0,
+   64.0
+  ],
+  [
+   375.0,
+   116.0
+  ],
+  [
+   383.0,
+   130.0
+  ],
+  [
+   392.0,
+   154.0
+  ],
+  [
+   383.0,
+   167.0
+  ],
+  [
+   254.0,
+   252.0
+  ],
+  [
+   137.0,
+   274.0
+  ]
+ ],
+ "outline_note": "Convex hull of the active (coloured) cells of the PUD model in Figure 4.1: the accumulation limit used to stop a fill spilling out through gaps between fault polygons. About 5.7 km2; the PUD describes the field as 2 x 3 km (printed p. 13).",
+ "barrier_px": [
+  [
+   229,
+   35
+  ],
+  [
+   214,
+   45
+  ],
+  [
+   215,
+   55
+  ],
+  [
+   225,
+   63
+  ],
+  [
+   228,
+   75
+  ],
+  [
+   232,
+   90
+  ],
+  [
+   240,
+   94
+  ],
+  [
+   250,
+   100
+  ],
+  [
+   268,
+   97
+  ],
+  [
+   280,
+   98
+  ],
+  [
+   292,
+   103
+  ],
+  [
+   305,
+   113
+  ],
+  [
+   320,
+   124
+  ],
+  [
+   327,
+   129
+  ],
+  [
+   340,
+   139
+  ],
+  [
+   350,
+   149
+  ],
+  [
+   356,
+   155
+  ],
+  [
+   353,
+   164
+  ]
+ ],
+ "barrier_note": "The thick black line labelled 'Dynamisk Barriere' in Figure 4.1: the boundary between the two non-communicating segments (PUD printed p. 21). Digitised by eye from the image; ends are extended beyond the outline so it divides the accumulation.",
+ "segments": [
+  {
+   "id": "south",
+   "name": "South segment",
+   "well": "NO 15/9-19 SR",
+   "note": "Contains 15/9-19 SR and the platform (PUD Figure 4.1)."
+  },
+  {
+   "id": "north",
+   "name": "North segment",
+   "well": "NO 15/9-19 A",
+   "note": "Contains 15/9-19 A (PUD Figure 4.1)."
+  }
+ ],
+ "evidence": [
+  {
+   "well": "NO 15/9-19 SR",
+   "fluid": "oil",
+   "top": 2864,
+   "base": 2883,
+   "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005, Table 3.2, printed p. 18",
+   "segment": "south"
+  },
+  {
+   "well": "NO 15/9-19 A",
+   "fluid": "oil",
+   "top": 3013,
+   "base": 3101,
+   "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005, Table 3.2, printed p. 18; 'oil down to' 3,101 m, p. 19",
+   "segment": "north"
+  },
+  {
+   "well": "NO 15/9-19 BT2",
+   "fluid": "water",
+   "top": 3149,
+   "base": 3275,
+   "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005, Table 3.2, printed p. 18; the reservoir was water-filled in a segment outside the field in 15/9-19 B (1997), printed p. 7",
+   "note": "Table 3.2 lists the sidetrack BT2; the text on p. 7 says 15/9-19 B. Taken to be the same penetration. It lies outside the field, in a separate segment, so it does not constrain the field's contact.",
+   "segment": "outside"
+  }
+ ],
+ "cases": [
+  {
+   "id": "pdo2005",
+   "label": "2005 development plan (probability)",
+   "date": "2005-02",
+   "status": "current",
+   "note": "No contact has been penetrated. Three contact models were weighted into discrete contacts; the base model used 3,120 m, the most likely single value. The distribution is deep-skewed.",
+   "contacts": [
+    {
+     "kind": "OWC",
+     "depth": 3120,
+     "role": "base model",
+     "basis": "stated",
+     "confidence": "Interpreted",
+     "distribution": [
+      {
+       "depth": 3105,
+       "p": 24
+      },
+      {
+       "depth": 3120,
+       "p": 21
+      },
+      {
+       "depth": 3135,
+       "p": 28
+      },
+      {
+       "depth": 3170,
+       "p": 14
+      },
+      {
+       "depth": 3260,
+       "p": 7
+      },
+      {
+       "depth": 3330,
+       "p": 6
+      }
+     ],
+     "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005: base-model OWC 3,120 m MSL, printed pp. 7, 13, 18, 21; discrete contacts with probabilities, Table 3.5, printed p. 19"
+    }
+   ]
+  },
+  {
+   "id": "pdo2005-base",
+   "label": "2005 development plan (base model, 3,120 m)",
+   "date": "2005-02",
+   "status": "current",
+   "note": "The single contact the dynamic model used, for the plain contact-line and fill views.",
+   "contacts": [
+    {
+     "kind": "OWC",
+     "depth": 3120,
+     "basis": "stated",
+     "confidence": "Interpreted",
+     "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005: 'Olje/vannkontakten (OVK) er satt til 3120 m MHN', printed p. 21"
+    }
+   ]
+  },
+  {
+   "id": "disc1993",
+   "label": "1993 discovery evaluation (minimum, base, maximum)",
+   "date": "1993-12",
+   "status": "superseded",
+   "note": "Assumed before development drilling: the OWC set to the spill point, 2,945 m, with 2,882 m as the minimum (the base of the reservoir in 15/9-19 SR) and 2,950 m as the maximum. Later wells found oil far below these (15/9-19 A to 3,101 m).",
+   "contacts": [
+    {
+     "kind": "OWC",
+     "depth": 2945,
+     "range": {
+      "min": 2882,
+      "likely": 2945,
+      "max": 2950
+     },
+     "basis": "assumed-spill",
+     "confidence": "Interpreted",
+     "source": "Discovery evaluation report, well 15/9-19 SR (Statoil, Dec. 1993), printed p. 170"
+    }
+   ]
+  }
+ ],
+ "minimum_contacts": [
+  {
+   "kind": "ODT",
+   "depth": 3101,
+   "well": "NO 15/9-19 A",
+   "basis": "measured-in-well",
+   "confidence": "Observed",
+   "segment": "north",
+   "source": "Volve PUD, Plan for utbygging og drift av Volve, February 2005, 'oil down to' in 15/9-19 A, 3,101 m, printed p. 19 and Table 3.2, p. 18"
+  }
+ ]
+}

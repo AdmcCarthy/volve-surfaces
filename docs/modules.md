@@ -86,13 +86,13 @@ Canonical is **EPSG:25831**. Measured here with pyproj 3.8 (offline, all grids p
 
 ```
 site/js/
-  surface/      grid.js  render.js (drawSurface, surfaceBounds, probeSurface)  trend.js  describe.js     the surface module: no layers, no host
-  layers/       contract.js  surface.js  faults.js          layers meeting the contract; they never import each other or the host
+  surface/      grid.js  render.js (drawSurface, prepareGrid, surfaceBounds, probeSurface)  trend.js  describe.js  fill.js     the surface module: no layers, no host
+  layers/       contract.js  surface.js  faults.js  contacts.js    layers meeting the contract; they never import each other or the host
   host/         viewer.js  review.js  view.js  ui.js        compose layers on one view; theme, controls, legend, facts rendering
   style/        ramps.js                                    reads SubScout tokens at draw time
   vendor/subscout/   symbols.js  symbols-data.js  symbols.json  NOTICE.md     copied unchanged, with the source commit
 scripts/
-  adapters/volve/    horizons.py  wells.py  faults.py       parse a source, convert ED50 -> ETRS89 (scripts/crs.py), write records
+  adapters/volve/    horizons.py  wells.py  faults.py  contacts.py     parse a source, convert ED50 -> ETRS89 (scripts/crs.py), write records
   crs.py  build.py  synthetic.py  check_datum.py  inventory.py  smoke.py  stage.py
 ```
 
@@ -129,7 +129,7 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 4. **Wells**: the Volve adapter (well picks, perforations; names parsed per 3.2), the Sodir adapter for status and fluid, the well layer using SubScout symbols; wells over a surface, with the datum check.
 5. **Title box, scale bar and location map** as host components, fields exactly per the Geostandard.
 6. **Optional `geostandard` ramp and hydrocarbon colour set**; H and L marks; hachured depressions on isochores.
-7. **Hydrocarbon contacts** ([contacts.md](contacts.md)): the fluid fill of a structure by contact, per fault segment, with the column map and the uncertainty range. A contacts record, `surface/fill.js` (compute), `layers/contacts.js`, a Volve adapter from the cited reports (OWC 3120 m MSL in the 2005 plan; 2882, 2945 and 2950 in the 1993 evaluation). Decisions for you are at the end of that note.
+7. **Done (2026-11-08): hydrocarbon contacts** ([contacts.md](contacts.md)): `surface/fill.js` (compute), `layers/contacts.js`, `adapters/volve/contacts.py` from the cited reports (OWC 3,120 base model and the plan's probability distribution; the superseded 1993 case, flagged contradicted), the viewer control and eight cards on the options page. The segment barrier and model outline are digitised from the plan's Figure 4.1 (about 250 m). Open questions are at the end of that note.
 
 ## Open decisions
 

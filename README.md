@@ -2,13 +2,14 @@
 
 **Shaded contour maps of the Volve geophysical interpretations, generalised for fast, readable display in the browser (D3).**
 
-Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). Hydrocarbon contacts (design): [docs/contacts.md](docs/contacts.md). Standards review: [docs/geostandard.md](docs/geostandard.md). Inventory: [docs/inventory.md](docs/inventory.md).
+Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). Hydrocarbon contacts (built, with the Volve evidence): [docs/contacts.md](docs/contacts.md). Standards review: [docs/geostandard.md](docs/geostandard.md). Inventory: [docs/inventory.md](docs/inventory.md).
 
 ```
 uv sync --all-groups
 uv run python scripts/inventory.py path/to/Volve_Geophysical_Interpretations.zip docs/inventory.md
 uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip   # -> data/out (11 Volve grids + manifest.json)
 PYTHONPATH=scripts uv run python -m adapters.volve.faults path/to/Volve_Geophysical_Interpretations.zip   # -> data/out/faults.json (ETRS89)
+PYTHONPATH=scripts uv run python -m adapters.volve.contacts path/to/Volve_Geophysical_Interpretations.zip # -> data/out/contacts.json (digitised, cited)
 uv run python scripts/synthetic.py                                               # -> data/synthetic (same format, invented geology)
 uv run pytest
 uv run python scripts/stage.py && python -m http.server -d _site 8000   # preview the site locally

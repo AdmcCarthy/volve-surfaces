@@ -57,3 +57,6 @@ footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
 .vs-entries { margin: 6px 14px 0; display: flex; flex-direction: column; gap: 3px; }
 .vs-entry { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--ss-text-subtle); }
 .vs-entry svg { color: var(--ss-text); flex: none; }
+.vs-entry-bar { align-items: flex-start; }
+.vs-entry-bar > div { width: 14rem; flex: none; }
+.vs-entry-bar .vs-bar { height: 10px; }

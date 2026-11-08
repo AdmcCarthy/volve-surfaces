@@ -4,6 +4,7 @@ import { rangeNote } from "../surface/describe.js";
 import { stopsOf, RAMPS } from "../style/ramps.js";
 import { createSurfaceLayer } from "../layers/surface.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
+import { createContactsLayer, loadContacts } from "../layers/contacts.js";
 import { compose, probeAll } from "./view.js";
 import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML, store } from "./ui.js";
 
@@ -11,7 +12,7 @@ initRoot();
 const $ = (id) => document.getElementById(id);
 // Detail: how the surface is prepared for display. Smoothing is edge-preserving (fault steps are kept) and stated on the map.
 const DETAIL = { raw: { sigmaM: 0, upsample: 1 }, light: { sigmaM: 0, upsample: 2 }, fine: { sigmaM: 25, upsample: 2 }, medium: { sigmaM: 50, upsample: 2 } };
-const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off" };
+const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off", contacts: "off", ccase: "", ccolour: "continuous", cfade: "on" };
 const NUM = new Set(["contour", "shade", "min", "max"]);
 const state = { ...defaults };
 for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
@@ -20,21 +21,26 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
 }
 const sets = {};
 let g = null, info = null, layers = [], view = null;
-const faultData = {};
+const faultData = {}, contactData = {};
 
 const getSet = (name) => (sets[name] ??= loadSet(`data/${name}`));
 const getFaults = (name) => (faultData[name] ??= loadFaults(`data/${name}`));
+const getContacts = (name) => (contactData[name] ??= loadContacts(`data/${name}`));
 // the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
 const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
 const save = () => history.replaceState(null, "", `#${new URLSearchParams(Object.entries(state).filter(([k, v]) => v !== defaults[k] && v !== null).map(([k, v]) => [k, String(v)])).toString()}`);
 
+let drawId = 0; // a draw that is overtaken by a newer one stops, so slow loads never overwrite the page with stale layers
 async function draw() {
+  const mine = ++drawId;
   save();
   $("f-step").hidden = state.fill !== "stepped";
   $("f-light").hidden = !state.shade;
   try {
     const set = await getSet(state.set);
-    g = await loadGrid(set, state.h);
+    const loaded = await loadGrid(set, state.h);
+    if (mine !== drawId) return;
+    g = loaded;
   } catch (e) {
     $("title").textContent = "Data not found";
     $("sub").textContent = String(e.message);
@@ -43,10 +49,21 @@ async function draw() {
   const [lo, hi] = extent(g.z), step = state.step === "auto" ? autoStep(lo, hi) : state.step;
   const surface = createSurfaceLayer(g, { fill: state.fill, stops: stopsOf(state.ramp), step, min: state.min, max: state.max,
     ...DETAIL[state.detail], contour: state.contour, shade: state.shade, light: state.light });
-  layers = [surface];
+  const ls = [surface];
+  // hydrocarbon contacts belong to the top-reservoir depth map; they sit above the surface and below the faults
+  const cd = state.contacts === "on" ? await getContacts(state.set).catch(() => null) : null;
+  if (mine !== drawId) return;
+  const cOk = cd && g.domain === "depth" && horizonKey(state.h) === cd.horizon && state.h.startsWith(cd.horizon);
+  $("f-ccase").hidden = $("f-ccolour").hidden = $("f-cfade").hidden = state.contacts !== "on" || !cd;
+  $("f-contacts-note").textContent = state.contacts !== "on" ? "" : !cd ? "No contacts for this data set." : cOk ? "" : "Contacts are drawn on the top Hugin depth map: choose Hugin Fm top, depth.";
+  if (cd && !$("c-ccase").options.length) $("c-ccase").replaceChildren(...cd.cases.map((c) => new Option(c.label, c.id)));
+  if (cd) { if (!cd.cases.some((c) => c.id === state.ccase)) state.ccase = cd.cases[0].id; $("c-ccase").value = state.ccase; }
+  if (cOk) ls.push(createContactsLayer(g, cd, { caseId: state.ccase, prepared: surface.prepared(), colour: state.ccolour, fade: state.cfade === "on" }));
   const fd = state.faults === "off" ? null : await getFaults(state.set).catch(() => null);
+  if (mine !== drawId) return;
   const fl = fd && createFaultLayer(fd, { polygons: ["polygons", "both"].includes(state.faults), sticks: ["sticks", "both"].includes(state.faults), horizon: horizonKey(state.h) });
-  if (fl && fl.count) layers.push(fl);
+  if (fl && fl.count) ls.push(fl);
+  layers = ls;
   view = compose($("map"), layers);
   info = surface.legend();
   renderLegend($("legend"), info);
@@ -75,6 +92,10 @@ bind("c-contour", "contour", [[0, "None"], [10, "10"], [20, "20"], [50, "50"]], 
 bind("c-shade", "shade", [[0, "Off"], [0.5, "Soft"], [1, "Strong"]], true);
 bind("c-light", "light", [["auto", "Across faults"], ["nw", "North-west"]]);
 bind("c-faults", "faults", [["off", "Off"], ["polygons", "Polygons"], ["sticks", "Sticks"], ["both", "Both"]]);
+bind("c-contacts", "contacts", [["off", "Off"], ["on", "On"]]);
+bind("c-ccolour", "ccolour", [["continuous", "Continuous"], ["stepped", "Stepped"]]);
+bind("c-cfade", "cfade", [["on", "Fade"], ["off", "None"]]);
+$("c-ccase").addEventListener("change", (e) => { state.ccase = e.target.value; draw(); });
 const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); draw(); });
 
 // colour range: typed values are kept until Reset or a new horizon
@@ -96,7 +117,7 @@ async function fillHorizons() {
   sel.value = state.h;
 }
 $("c-h").addEventListener("change", (e) => { state.h = e.target.value; state.min = state.max = null; draw(); });
-$("c-set").addEventListener("click", async () => { state.min = state.max = null; await fillHorizons(); draw(); });
+$("c-set").addEventListener("click", async () => { state.min = state.max = null; state.ccase = ""; $("c-ccase").replaceChildren(); await fillHorizons(); draw(); });
 
 // readout under the pointer: the raw surface value (not the smoothed one) and any fault within 30 m
 const read = $("read");

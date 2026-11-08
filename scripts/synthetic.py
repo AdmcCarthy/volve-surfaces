@@ -96,6 +96,80 @@ def faults_record() -> dict:
             "note": "Invented fault traces, with type and downthrown side as the generator made them.", "features": feats}  # fmt: skip
 
 
+def contacts_record(seed: int = 7) -> dict:
+    """Synthetic contacts: a gas cap over an oil leg in the west segment, oil only (a different contact) in the east.
+
+    F2 is the sealing barrier between the segments; each seed is the crest of its high. The contacts are chosen relative to the
+    crest depths so the fills are closed inside the survey. Shows what the Volve documents cannot: dual-phase and unequal contacts.
+    """
+    z, survey, gap = surfaces(seed)
+    zt = np.where(
+        survey & ~gap, z["hugin_top"], np.nan
+    )  # the grid as written: fault gaps are nodata
+    xx, yy, u, v = coords()
+    xc, yc, c, s = X0 + NX * CELL / 2, Y0 - NY * CELL / 2, np.cos(ANGLE), np.sin(ANGLE)
+
+    def crest(u0, v0, radius):
+        near = (np.hypot(u - u0, v - v0) < radius) & survey
+        r, k = np.unravel_index(np.nanargmin(np.where(near, zt, np.nan)), zt.shape)
+        return [round(float(xx[r, k]), 1), round(float(yy[r, k]), 1)], float(zt[r, k])
+
+    (west_xy, west_z), (east_xy, east_z) = crest(-700, 150, 900), crest(1900, -300, 700)
+    (u0, v0), (u1, v1) = FAULTS["F2"]
+    d = np.array([u1 - u0, v1 - v0], float)
+    d /= np.hypot(*d)
+    a, b = (
+        np.array([u0, v0]) - 400 * d,
+        np.array([u1, v1]) + 400 * d,
+    )  # F2 extended past its tips so it divides the survey
+    to_xy = lambda p: [
+        round(float(xc + c * p[0] - s * p[1]), 1),
+        round(float(yc + s * p[0] + c * p[1]), 1),
+    ]
+    # a trap is closed only below its spill point: the deepest level at which the fill from the crest stays inside the survey, the
+    # barrier included. Contacts are set below it by a margin so the example is a closed accumulation, not a leaking one.
+    from scipy import ndimage as ndi
+
+    block = np.zeros(zt.shape, bool)
+    for t in np.linspace(0, 1, 400):
+        pu, pv = a + t * (b - a)
+        px_, py_ = to_xy((pu, pv))
+        r, k = int((Y0 - py_) / CELL), int((px_ - X0) / CELL)
+        if 0 <= r < zt.shape[0] and 0 <= k < zt.shape[1]:
+            block[r, k] = True
+    block = ndi.binary_dilation(block, iterations=1)
+    outside = ndi.binary_dilation(~survey, iterations=1)
+
+    def spill(xy):
+        r, k = int((Y0 - xy[1]) / CELL), int((xy[0] - X0) / CELL)
+        for level in range(int(np.ceil(zt[r, k])), int(np.nanmax(zt))):
+            lab, _ = ndi.label((zt <= level) & ~block)
+            comp = lab == lab[r, k]
+            if (comp & outside).any():
+                return level - 1
+        return int(np.nanmax(zt))
+
+    spill_w, spill_e = spill(west_xy), spill(east_xy)
+    owc_w, owc_e = (
+        min(round(west_z + 115), spill_w - 20),
+        min(round(east_z + 65), spill_e - 15),
+    )
+    goc = round(west_z + 0.45 * (owc_w - west_z))
+    return {
+        "crs": CRS, "synthetic": True, "attribution": ATTRIBUTION, "reservoir": "Hugin Fm (synthetic)", "horizon": "hugin_top",
+        "datum": "synthetic (metres below an arbitrary datum)", "outline": None,
+        "segments": [{"id": "west", "name": "West segment", "well": None, "seed": west_xy, "note": "Gas cap over an oil leg."},
+                     {"id": "east", "name": "East segment", "well": None, "seed": east_xy, "note": "Oil only, a different contact."}],
+        "barriers": [{"id": "F2", "name": "Fault F2 (sealing)", "kind": "fault", "accuracy_m": 0, "note": "Synthetic sealing fault.", "xy": [to_xy(a), to_xy(b)]}],
+        "evidence": [], "minimum_contacts": [], "checks": [],
+        "cases": [{"id": "model", "label": "Synthetic: gas cap and oil leg (west), oil (east)", "status": "synthetic", "date": None,
+                   "note": f"Invented contacts, below the spill points ({spill_w} and {spill_e} m) so both accumulations are closed. The two segments cannot merge across F2, so each keeps its own contact.",
+                   "contacts": [{"kind": "GOC", "depth": goc, "segment": "west", "basis": "synthetic", "confidence": "Synthetic", "source": "synthetic generator"},
+                                {"kind": "OWC", "depth": owc_w, "segment": "west", "range": {"min": owc_w - 15, "likely": owc_w, "max": owc_w + 20}, "basis": "synthetic", "confidence": "Synthetic", "source": "synthetic generator"},
+                                {"kind": "OWC", "depth": owc_e, "segment": "east", "range": {"min": owc_e - 10, "likely": owc_e, "max": owc_e + 20}, "basis": "synthetic", "confidence": "Synthetic", "source": "synthetic generator"}]}],
+    }  # fmt: skip
+
+
 def surfaces(seed: int = 7):
     """Depth surfaces (m, positive down) per layer and the fault-gap mask; all shape (NY, NX)."""
     rng = np.random.default_rng(seed)
@@ -107,10 +181,10 @@ def surfaces(seed: int = 7):
 
     # Structure: regional dip to the east, a dome, a smaller satellite high, a saddle between them.
     structure = (
-        -170 * gauss(u, v, -700, 150, 1500, 850)
-        - 90 * gauss(u, v, 1900, -300, 800, 600)
-        + 35 * (u / 1000)
-        + 25 * (v / 1000)
+        -300 * gauss(u, v, -700, 150, 1300, 800)
+        - 190 * gauss(u, v, 1900, -300, 700, 550)
+        + 8 * (u / 1000)
+        + 6 * (v / 1000)
     )
     f1, d1, tp1 = fault_offset(u, v, *FAULTS["F1"], throw=1.0)  # main fault
     f2, _d2, tp2 = fault_offset(u, v, *FAULTS["F2"], throw=1.0)  # smaller fault
@@ -207,6 +281,9 @@ def build(out_dir: str = "data/synthetic", seed: int = 7) -> None:
     (out / "manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
     (out / "faults.json").write_text(
         json.dumps(faults_record(), separators=(",", ":")), encoding="utf-8"
+    )
+    (out / "contacts.json").write_text(
+        json.dumps(contacts_record(seed), separators=(",", ":")), encoding="utf-8"
     )
 
 

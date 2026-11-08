@@ -17,6 +17,12 @@ export function stopsOf(key) {
   return Array.from({ length: n }, (_, i) => token(`--ss-data-${r.kind}-${r.name}-${i + 1}`));
 }
 
+// Seven stops of a hue's own ladder (--ss-<hue>-N), for fills that are not a data ramp: fluids on a map. Step order is light to strong in
+// the light scheme and dark to bright in the dark one, like the sequential ramps.
+export function hueRamp(hue, steps = [3, 5, 7, 8, 9, 11, 12]) {
+  return steps.map((i) => token(`--ss-${hue}-${i}`));
+}
+
 // Continuous ramp t in [0, 1] -> colour (piecewise through the stops in Lab, as a sequential ramp should blend).
 export const interpolator = (stops) => d3.piecewise(d3.interpolateLab, stops);
 

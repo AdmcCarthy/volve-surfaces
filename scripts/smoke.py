@@ -43,9 +43,61 @@ async () => {
 }
 """
 
+FILL = """
+async () => {
+  const G = await import('/js/surface/grid.js'), Fill = await import('/js/surface/fill.js'), C = await import('/js/layers/contract.js');
+  const R = await import('/js/style/ramps.js'), S = await import('/js/layers/surface.js'), K = await import('/js/layers/contacts.js');
+  const V = await import('/js/host/view.js');
+  const problems = [], canvas = document.createElement('canvas'), near = (a, b) => Math.abs(a - b) < 1e-9;
+  const expect = { real: { pdo2005: ['north', 'south'], 'pdo2005-base': ['north', 'south'], disc1993: ['south'] }, synthetic: { model: ['east', 'west'] } };
+  for (const set of ['real', 'synthetic']) {
+    const g = await G.loadGrid(await G.loadSet('data/' + set), 'hugin_top_depth'), data = await K.loadContacts('data/' + set);
+    if (!data) { problems.push(set + ': no contacts file'); continue; }
+    const surface = S.createSurfaceLayer(g, { step: 50, stops: R.stopsOf('fjord'), sigmaM: 25, upsample: 2 });
+    for (const c of data.cases) {
+      const layer = K.createContactsLayer(g, data, { caseId: c.id, prepared: surface.prepared() });
+      for (const p of C.checkLayer(layer)) problems.push(set + ' ' + c.id + ': ' + p);
+      try { V.compose(canvas, [surface, layer], { width: 500 }); } catch (e) { problems.push(set + ' ' + c.id + ' compose: ' + e.message); }
+      const filled = layer.fill.segments.filter((s) => !s.empty && s.area_km2 > 0).map((s) => s.id).sort();
+      if (JSON.stringify(filled) !== JSON.stringify(expect[set][c.id])) problems.push(set + ' ' + c.id + ': filled ' + filled + ', expected ' + expect[set][c.id]);
+      const merged = layer.fill.segments.filter((s) => s.merged).map((s) => s.id);
+      if (merged.length) problems.push(set + ' ' + c.id + ': segments merge across the barrier: ' + merged);
+      if (set === 'synthetic' && layer.fill.segments.some((s) => s.open)) problems.push('synthetic ' + c.id + ': an accumulation is open to the survey edge, it should be closed');
+      if (!Array.isArray(layer.legend()) || !layer.facts().length) problems.push(set + ' ' + c.id + ': empty legend or facts');
+    }
+  }
+  // probability of hydrocarbons from the Volve development plan's Table 3.5 (exceedance of the discrete contacts)
+  const T = [[3105, 24], [3120, 21], [3135, 28], [3170, 14], [3260, 7], [3330, 6]].map(([depth, p]) => ({ depth, p }));
+  const m = Fill.segmentModel([{ kind: 'OWC', depth: 3120, distribution: T }]);
+  const want = [[3100, 1], [3105, 1], [3120, 0.76], [3135, 0.55], [3170, 0.27], [3260, 0.13], [3330, 0.06], [3400, 0]];
+  for (const [z, p] of want) if (!near(Fill.probAt(m, z), p)) problems.push('probAt ' + z + ' = ' + Fill.probAt(m, z) + ', expected ' + p);
+  let last = 1;
+  for (let z = 3000; z <= 3400; z += 5) { const p = Fill.probAt(m, z); if (p > last + 1e-12) problems.push('probability rises at ' + z); last = p; }
+  const q = Fill.quantiles(T);
+  if (q.P90 !== 3105 || q.P50 !== 3135 || q.P10 !== 3260) problems.push('quantiles ' + JSON.stringify(q));
+  const dual = Fill.segmentModel([{ kind: 'GOC', depth: 2800 }, { kind: 'OWC', depth: 2900 }]);
+  if (Fill.fluidAt(dual, 2790) !== 'gas' || Fill.fluidAt(dual, 2850) !== 'oil' || Fill.fluidAt(dual, 2950) !== null) problems.push('fluidAt on a gas cap over an oil leg');
+  const tri = Fill.segmentModel([{ kind: 'OWC', depth: 20, range: { min: 10, likely: 20, max: 40 } }]);
+  if (!near(Fill.probAt(tri, 10), 1) || !near(Fill.probAt(tri, 40), 0) || Math.abs(Fill.probAt(tri, 20 - 1e-9) - Fill.probAt(tri, 20 + 1e-9)) > 1e-6) problems.push('triangular probability is not continuous at the likely value');
+  return problems;
+}
+"""
+
 PAGES = [
     ("viewer", "viewer.html#shade=0.5", "canvas#map", "light"),
     ("viewer_faults", "viewer.html#faults=both&shade=0.5", "canvas#map", "light"),
+    (
+        "viewer_contacts",
+        "viewer.html#contacts=on&ccase=pdo2005&faults=polygons",
+        "canvas#map",
+        "light",
+    ),
+    (
+        "viewer_contacts_synthetic",
+        "viewer.html#set=synthetic&contacts=on&ccase=model&ccolour=stepped",
+        "canvas#map",
+        "dark",
+    ),
     (
         "viewer_synthetic",
         "viewer.html#set=synthetic&h=hugin_top_depth&faults=polygons",
@@ -111,6 +163,9 @@ def main(out: Path) -> int:
         problems = page.evaluate(CONTRACT)
         print(f"layer contract: {len(problems)} problems")
         failures += [f"contract: {p}" for p in problems]
+        fill_problems = page.evaluate(FILL)
+        print(f"contacts fill and probability: {len(fill_problems)} problems")
+        failures += [f"contacts: {p}" for p in fill_problems]
         browser.close()
     httpd.shutdown()
     for f in failures:

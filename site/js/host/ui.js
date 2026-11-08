@@ -73,7 +73,17 @@ export function renderEntries(el, entries) {
   el.replaceChildren(...entries.map((e) => {
     const row = document.createElement("div");
     row.className = "vs-entry";
+    if (e.kind === "bar") {
+      // a colour bar: stepped cells or a gradient, ticks at the ends and the middle
+      const [d0, d1] = e.domain, f = d3.format(",.0f");
+      const bar = e.colours ? `display:grid;grid-template-columns:repeat(${e.colours.length},1fr)` : `background:linear-gradient(to right,${e.stops.join(",")})`;
+      row.className = "vs-entry vs-entry-bar";
+      row.innerHTML = `<div><div class="vs-bar" style="${bar}">${e.colours ? e.colours.map((c) => `<i style="background:${c}"></i>`).join("") : ""}</div><div class="vs-ticks"><span style="left:0">${f(d0)}</span><span style="left:50%">${f((d0 + d1) / 2)}</span><span style="left:100%">${f(d1)}</span></div></div><span>${escape(e.label)}</span>`;
+      return row;
+    }
     const sample = e.kind === "symbol" ? e.svg
+      : e.kind === "hatch" ? `<svg width="34" height="14" aria-hidden="true"><line x1="2" y1="7" x2="32" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>${[6, 12, 18, 24, 30].map((x) => `<line x1="${x}" y1="2" x2="${x}" y2="12" stroke="currentColor" stroke-width="1"/>`).join("")}</svg>`
+      : e.kind === "fade" ? `<svg width="34" height="12" aria-hidden="true"><defs><linearGradient id="vs-fade"><stop offset="0" stop-color="currentColor" stop-opacity="1"/><stop offset="1" stop-color="currentColor" stop-opacity="0.05"/></linearGradient></defs><rect x="2" y="2" width="30" height="8" fill="url(#vs-fade)"/></svg>`
       : `<svg width="34" height="12" aria-hidden="true"><line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="${e.width ?? 1.4}" stroke-opacity="${e.alpha ?? 1}" stroke-linecap="round"${e.dash ? ` stroke-dasharray="${e.dash}"` : ""}/></svg>`;
     row.innerHTML = `${sample}<span>${escape(e.label)}</span>`;
     return row;

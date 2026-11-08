@@ -83,3 +83,15 @@ def test_modules_are_separate_surface_never_imports_layers_or_host():
     assert (
         "surface/" not in faults and "faults" not in surface
     )  # layers never import each other
+
+
+def test_contacts_layer_uses_the_surface_module_but_never_another_layer_or_the_host():
+    contacts = (SITE / "js" / "layers" / "contacts.js").read_text(encoding="utf-8")
+    assert (
+        '"../host/' not in contacts
+        and '"./surface.js"' not in contacts
+        and '"./faults.js"' not in contacts
+    )
+    assert (
+        "../surface/fill.js" in contacts and "../vendor/subscout/symbols.js" in contacts
+    )  # compute from the surface module, symbols from SubScout

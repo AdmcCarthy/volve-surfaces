@@ -2,8 +2,10 @@
 import { loadSet, loadGrid, blur, derived, extent, autoStep } from "../surface/grid.js";
 import { RAMPS, stopsOf } from "../style/ramps.js";
 import { createSurfaceLayer } from "../layers/surface.js";
+import { createContactsLayer, loadContacts } from "../layers/contacts.js";
+import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { compose } from "./view.js";
-import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, factsHTML } from "./ui.js";
+import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML } from "./ui.js";
 
 initRoot();
 const $ = (id) => document.getElementById(id);
@@ -65,6 +67,18 @@ const SECTIONS = [
       { title: "Residual relief, stepped", h: "residual", ramp: "div", opts: { diverging: true, step: null }, note: "Equal classes symmetric about zero, so the middle class is neutral.", tags: ["derived", "diverging"] },
       { title: "Residual relief, linear, fjord to ochre", h: "residual", ramp: "div_fjord", opts: { diverging: true, step: null, fill: "linear" }, note: "The Frost diverging ramp.", tags: ["derived", "diverging"] },
     ] },
+  { id: "contacts", title: "Hydrocarbon contacts",
+    lead: "The classical view: the part of the structure that holds each fluid, by contact, per fault segment. Fluid is a continuous colour (or stepped) keyed to the height of the column above the contact, oil in ochre and gas in red, so the fill reads as a column map; where the contact is uncertain the fill fades with the probability that the contact is at least that deep. A hatched line is a segment barrier: fills and contacts do not merge across it. Wells that prove a fluid use the SubScout well symbols. Volve cases are digitised from the development plan and approximate; the synthetic cards show what Volve cannot (a gas cap, and two different contacts).",
+    cards: [
+      { title: "A. Contact line only", contacts: { case: "pdo2005-base", opts: { fill: false, barrier: false, outline: false, fade: false } }, note: "The 2005 base-model oil-water contact (3,120 m) and the wells that prove oil and water. The depth fill stays as it is.", tags: ["Volve", "2005 base case"] },
+      { title: "B. Fluid fill, continuous colour", contacts: { case: "pdo2005-base", opts: { fade: false, barrier: false, outline: false } }, note: "Colour is the oil column above the contact, continuous from pale at the contact to strong at the crest.", tags: ["Volve", "continuous"] },
+      { title: "B. Fluid fill, stepped colour", contacts: { case: "pdo2005-base", opts: { fade: false, colour: "stepped", barrier: false, outline: false } }, note: "The same column in classes (the class step is chosen from the range): read the height off the bar.", tags: ["Volve", "stepped"] },
+      { title: "D. Two segments, one barrier", contacts: { case: "pdo2005-base", opts: { fade: false } }, note: "The north and south segments of the 2005 development plan. The hatched line is the dynamic barrier digitised from the plan's Figure 4.1, and the dotted line the model outline that holds the fill. Both segments share the 3,120 m contact in the plan.", tags: ["Volve", "digitised, about 250 m"] },
+      { title: "F. Uncertain contact: fade", contacts: { case: "pdo2005", opts: {} }, note: "No well has found the contact. Opacity is the probability that the contact is at least this deep (plan Table 3.5: P90 3,105, P50 3,135, P10 3,260 m). The base-model line is solid, the percentiles dashed.", tags: ["Volve", "probability"] },
+      { title: "F. The 1993 evaluation: superseded", contacts: { case: "disc1993", opts: {} }, note: "The earlier minimum, base and maximum contacts (2,882, 2,945, 2,950 m). Well 15/9-19 A later found oil to 3,101 m, below even the maximum, so the north segment has no fill and the facts say the case is contradicted.", tags: ["Volve", "contradicted"] },
+      { title: "C. Gas cap, oil leg and two segments", set: "synthetic", contacts: { case: "model", opts: {} }, faults: true, note: "Synthetic. The west segment has a gas cap over an oil leg (a gas-oil and an oil-water contact); the east segment has oil only, at a different contact. Fault F2 is a sealing barrier, so the contacts do not merge; the west fill stops at fault F1 because the fault gap is a barrier in the surface itself.", tags: ["synthetic", "dual phase"] },
+      { title: "E. Column map on a quiet surface", ramp: "shale", contacts: { case: "pdo2005-base", opts: { fade: false, barrier: false, outline: false } }, opts: { contour: 0 }, note: "The same column over a muted shale depth fill with no contour lines, so the column is the only strong colour.", tags: ["Volve", "column"] },
+    ].map((c) => ({ h: TOP, ramp: "fjord", opts: {}, ...c })) },
 ];
 
 // ---------------------------------------------------------------- build
@@ -92,7 +106,7 @@ for (const s of SECTIONS) {
   for (const c of s.cards) {
     const el = document.createElement("figure");
     el.className = "ss-figure vs-card";
-    el.innerHTML = `<p class="ss-fig-title">${c.title}</p><canvas role="img" aria-label="${c.title}"></canvas><div class="lg"></div><p class="vs-note">${c.note || ""}</p><div class="vs-tags">${(c.tags || []).map((t) => `<span class="vs-tag">${t}</span>`).join("")}</div><div class="fx"></div>`;
+    el.innerHTML = `<p class="ss-fig-title">${c.title}</p><canvas role="img" aria-label="${c.title}"></canvas><div class="lg"></div><div class="en"></div><p class="vs-note">${c.note || ""}</p><div class="vs-tags">${(c.tags || []).map((t) => `<span class="vs-tag">${t}</span>`).join("")}</div><div class="fx"></div>`;
     sec.querySelector(".vs-grid").append(el);
     const card = { ...c, el, visible: false, stale: true };
     el._card = card; cards.push(card);
@@ -101,8 +115,8 @@ for (const s of SECTIONS) {
 }
 
 // ---------------------------------------------------------------- data
-async function gridFor(h) {
-  const set = await getSet(state.set);
+async function gridFor(h, setName = state.set) {
+  const set = await getSet(setName);
   if (h === "thickness") {
     const [t, b] = await Promise.all([loadGrid(set, TOP), loadGrid(set, BASE)]);
     const z = Float32Array.from(t.z, (v, i) => { const d = b.z[i] - v; return d >= 0 ? d : NaN; });
@@ -119,13 +133,21 @@ async function paint(c) {
   c.stale = false;
   const canvas = c.el.querySelector("canvas");
   try {
-    const g = await gridFor(c.h), seq = RAMPS[c.ramp].kind === "seq";
+    const setName = c.set ?? state.set, g = await gridFor(c.h, setName);
     const [lo, hi] = extent(g.z);
     const layer = createSurfaceLayer(g, { fill: "stepped", step: autoStep(lo, hi), classes: 9, ...FINE, contour: 10, shade: 0,
       ...c.opts, stops: stopsOf(c.ramp) });
-    compose(canvas, [layer]);
+    const layers = [layer];
+    if (c.contacts) { // contacts sit above the surface and below the faults; the card names its own data set when it needs one
+      const cd = await loadContacts(`data/${setName}`);
+      if (!cd) throw new Error(`no contacts for the ${setName} data`);
+      layers.push(createContactsLayer(g, cd, { caseId: c.contacts.case, prepared: layer.prepared(), ...c.contacts.opts }));
+      if (c.faults) { const fd = await loadFaults(`data/${setName}`); if (fd) layers.push(createFaultLayer(fd, { polygons: true, sticks: false, horizon: null })); }
+    }
+    compose(canvas, layers);
     renderLegend(c.el.querySelector(".lg"), layer.legend());
-    c.el.querySelector(".fx").innerHTML = factsHTML(layer.facts({ short: true }));
+    renderEntries(c.el.querySelector(".en"), layers.slice(1).flatMap((l) => l.legend()));
+    c.el.querySelector(".fx").innerHTML = factsHTML(layers.flatMap((l) => l.facts({ short: true })));
     $("attr").textContent = g.manifest.synthetic ? g.manifest.attribution : ATTRIBUTION;
   } catch (e) {
     c.el.querySelector(".fx").textContent = `Could not draw: ${e.message}`;

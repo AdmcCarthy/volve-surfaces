@@ -7,7 +7,7 @@ import { faultTrend } from "./trend.js";
 const NEG = -1e9; // nodata value for contouring, far below every threshold
 const ALT = (35 * Math.PI) / 180; // low sun, so scarps cast and take shadow
 
-function bilinear(z, nx, ny, i, j, fx, fy) {
+export function bilinear(z, nx, ny, i, j, fx, fy) {
   let s = 0, w = 0;
   for (let dj = 0; dj < 2; dj++) {
     for (let di = 0; di < 2; di++) {
@@ -61,6 +61,16 @@ export function surfaceBounds(g) {
   return [g.x0 + x0 * cell, g.y0 - y1 * cell, g.x0 + x1 * cell, g.y0 - y0 * cell];
 }
 
+// The grid as it is drawn: smoothed as asked, dilated into nodata, and upsampled for contouring. Layers that must line up with the
+// surface (contact lines, fills) take this, so their contours are the ones the surface shows.
+export function prepareGrid(g, opts = {}) {
+  const { nx, ny, cell } = g, sigmaM = opts.sigmaM ?? 0, upsampleBy = opts.upsample ?? 1;
+  const sc = sigmaM / cell;
+  const smooth = sigmaM > 0 ? (opts.smoother === "gaussian" ? blur(g.z, nx, ny, sc) : edgePreserve(g.z, nx, ny, sc)) : g.z;
+  const dev = deviation(g.z, smooth);
+  return { smooth, dev, fine: upsample(dilate(smooth, nx, ny, 3), nx, ny, upsampleBy) };
+}
+
 // Options
 //   fill      "linear" | "stepped"
 //   stops     colour stops, low to high
@@ -77,11 +87,7 @@ export function drawSurface(ctx, g, view, opts = {}) {
   const o = { fill: "stepped", stops: [], step: null, min: null, max: null, classes: 9, method: "nice", edges: null, sigmaM: 0,
     smoother: "edge", upsample: 1, contour: 0, shade: 0, light: "auto", ve: 5, diverging: false, ...opts };
   const { nx, ny, cell } = g;
-  const sc = o.sigmaM / cell;
-  const smooth = o.sigmaM > 0 ? (o.smoother === "gaussian" ? blur(g.z, nx, ny, sc) : edgePreserve(g.z, nx, ny, sc)) : g.z;
-  const dev = deviation(g.z, smooth);
-  const grid = dilate(smooth, nx, ny, 3);
-  const fine = upsample(grid, nx, ny, o.upsample), U = fine.u;
+  const { smooth, dev, fine } = prepareGrid(g, o), U = fine.u;
 
   const dpr = view.dpr, ps = view.scale * dpr; // device px per metre
   const pc = ps * cell; // device px per grid cell

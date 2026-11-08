@@ -91,3 +91,7 @@ confident outline. A seed below every contact gives an empty segment. A fill nev
 1. **The barrier line style lives in this repo.** This is the home of contour-based work for subsurface interpretation: surfaces, faults, barriers, contact lines and fills, and their line styles are owned here. SubScout keeps tokens and point symbols (wells, installations).
 2. **The model outline as the trap limit is accepted** for the north and south segments. It stays an explicit, labelled assumption ("held by the model outline"), with the digitising accuracy stated.
 3. **The Geostandard colour and contact-line preset is built**, off by default (the viewer's *Contact colours* control and two *G* cards on the options page).
+
+## 8. Next: structure
+
+How closures, saddles and faults should limit the contacts, with first evidence from the data and a plan: [contacts-structure.md](contacts-structure.md).

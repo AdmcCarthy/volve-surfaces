@@ -1,0 +1,137 @@
+# Modules
+
+How this repo fits with SubScout, Relief, Wildcat and the other mapping repos, so that a surface, a wellbore symbol or a fault line each have one owner and can be used
+without the others. Written 2026-11-08, after reviewing the Sodir Geostandard ([geostandard.md](geostandard.md)).
+
+## Decisions (2026-11-08)
+
+1. **Well symbols live in SubScout.** SubScout is the style authority, every mapping repo already vendors from it, and this repo already copies its tokens.
+2. **One canonical coordinate system: ETRS89 / UTM zone 31N (EPSG:25831).** Everything is converted at the edge, by adapters. No layer ever receives ED50.
+3. **The Sodir Geostandard (v22.00) is the authority for map-type names, title-box metadata, symbols and standard colours.** SubScout's style guide decides what the standard is silent on;
+   conflicts are listed in [geostandard.md](geostandard.md) section 7. Fjord stays the default ramp; the standard's own scales are selectable alternatives.
+
+## The modules
+
+| Module | Owns | Never knows about | Lives in |
+|---|---|---|---|
+| **Tokens and style** | colour, type, spacing, motion, the data ramps, the style guide | any data, any renderer | SubScout (exists) |
+| **Symbols** | the symbol vocabulary (Geostandard 3.4, 1.3): classification, shapes, sizes, legend entries; `classify()` and `draw()` | surfaces, files, CRS conversion, d3-contour | **SubScout**, new: `symbols.toml` + `runtime/js/symbols.js` |
+| **Surface layer** | grid to contours, stepped and linear fill, shading, edge-preserving smoothing, fault-trend lighting, surface legend, readout | wells, faults, Volve | this repo, `site/js/surface/` |
+| **Vector overlays** | styled lines and polygons: faults, licence outlines, boundaries, contact lines | what the features mean, where they came from | this repo first, `site/js/layers/`; Relief already has a vector page |
+| **Well layer** | placing well symbols and trajectories from normalised well records, labels, leader lines | surfaces; how symbols are drawn (asks Symbols) | this repo first, `site/js/layers/` |
+| **Adapters** | one per source: parse, validate, convert CRS and vocabulary, write normalised records | drawing | `scripts/adapters/<source>/`: `volve`, `sodir` |
+| **Host** | composes layers on one view, owns theme, controls, title box, scale bar, location map, URL state | how any layer draws | viewer here; SubScout stories elsewhere |
+
+Dependency direction: **host → layers → symbols and tokens**, and **adapters → files**. Layers never import each other. Adapters never import drawing code. A symbol never imports d3-contour,
+a grid or a CRS library. This is what lets Wildcat or Tulip use well symbols without pulling in surfaces, and this viewer use a surface without wells.
+
+## The layer contract
+
+Every layer is a small object. The host builds one **view** and hands it to every layer; no layer computes its own transform.
+
+```js
+// view: one transform for all layers
+{ crs: "EPSG:25831", bounds: [xmin, ymin, xmax, ymax],   // metres
+  width, height, dpr, scheme: "light" | "dark",
+  project: (x, y) => [px, py] }                           // metres to device pixels, north up
+
+// layer
+{ id, kind,                    // "surface" | "wells" | "faults" | "installations" | "basemap"
+  crs: "EPSG:25831",           // asserted, and checked by the host
+  bounds(),                    // extent in metres
+  draw(ctx, view),             // Canvas; layers that need SVG expose drawSvg(svg, view)
+  legend(),                    // data only: [{ symbol, label, group }]; the host renders it
+  facts(),                     // title-box rows: [{ label, value }], labels exactly as in the Geostandard
+  probe(x, y) }                // what is under a point, or null
+```
+
+Symbols are exposed as d3-compatible symbol types, `{ draw(context, size) }`, so the same symbol draws on Canvas and SVG at any size and picks up tokens.
+
+### Normalised records (what adapters write and layers read)
+
+```
+well         { ref: { country, quadrant, block, type, number, history, wellhistory, track },  // Geostandard 3.2, parsed
+               name, x, y,                                    // surface location, EPSG:25831
+               class: "exploration" | "development" | "injector" | "non-hydrocarbon" | "shallow",
+               purpose, status, content: ["OIL","GAS",...],   // Sodir vocabulary, already mapped
+               function: { kind, codes },                     // Geostandard 3.4.4
+               planned: bool,
+               track: [{ x, y, tvdss, md }] | null,           // EPSG:25831, tvdss positive down in metres
+               trackKind: "actual" | "approximate" | "planned",
+               picks: [{ surface, md, tvdss }] | null,
+               source, licence }
+fault        { id, name, geometry,                            // LineString or Polygon, EPSG:25831
+               type: "normal" | "reverse" | "strike-slip" | "unknown",
+               certainty: "certain" | "uncertain",
+               horizon, domain: "depth" | "twt", source }
+installation { id, type, planned: bool, x, y, source }        // type from Geostandard 3.5
+surface      { the existing grid manifest, crs EPSG:25831 }
+```
+
+Every record carries `source` and `licence` so a host can assemble the attribution line. Unknown stays `unknown`; an adapter never guesses a fault's downthrown side or a well's fluid.
+
+## Coordinates
+
+Canonical is **EPSG:25831**. Measured here with pyproj 3.8 (offline, all grids present):
+
+- Volve horizons are **ED50 / UTM 31N (EPSG:23031)**. The best available transformation, *ED50 to WGS 84 (24)* with ETRS89 as WGS 84, has a stated accuracy of **2 m** and moves a Volve point by about
+  **-90 m east and -215 m north (about 233 m)**. Earlier notes in this repo said "about 100 m"; that was wrong. Ignoring it would put wells a quarter of a kilometre from the fault that should be next to them.
+- **Sodir wellbore coordinates are ED50 geographic (EPSG:4230)** (Wildcat stays in ED50 on purpose, to keep Sodir's block rectangles exact). Wells from Sodir need the same conversion.
+- Surfaces are built from scattered picks, so the conversion is applied to each pick **before** gridding: the grid frame becomes a north-up ETRS89 frame and nothing is resampled twice.
+  `data/out` and `data/synthetic` manifests then say `crs: EPSG:25831` and record `source_crs` and the transformation used.
+- A layer that is handed another CRS is an error, not a silent reprojection.
+
+## Where things go (target layout)
+
+```
+site/js/
+  surface/      grid.js  render.js  trend.js            surface layer (today: site/js/*.js)
+  layers/       faults.js  wells.js  contract.md       vector and well layers, same contract
+  host/         viewer.js  review.js  titlebox.js  scalebar.js  legend.js
+  vendor/subscout/   tokens.css  base.css  symbols.js  symbols.json     copied unchanged, with NOTICE and commit hash
+scripts/
+  adapters/volve/    parse horizons, well picks and perforations, fault sticks and polygons -> records, EPSG:23031 -> 25831
+  adapters/sodir/    FactPages wellbores, installations (shared with Wildcat's fetch_sodir.py)
+  surface/           build_grid.py (generic: picks -> grid, no Volve names), synthetic.py
+```
+
+Today's files map as follows: `grid.js`, `render.js`, `trend.js` are the surface layer; `ramps.js` is a thin reader of SubScout tokens and moves to `vendor/subscout`; `ui.js` splits into
+legend, facts (the title box) and generic helpers; `viewer.js` and `review.js` are hosts; `scripts/build.py` splits into `adapters/volve` (names, files, CRS) and a generic gridder.
+
+### What SubScout gets
+
+New, and only after you agree:
+
+- `styleguide/wellbores.md`: the rules (shape first, colour optional, scale-dependent codes, legend always lists the codes in use, planned versus actual).
+- `src/subscout/tokens/symbols.toml`: the vocabulary (technical status, hydrocarbon status, function, class, installation type), a shape per symbol as a path in a unit box, default size at each scale
+  tier, the Geostandard colour set as an optional preset. Generated into `runtime/js/symbols.js` and `symbols.json`, committed, CI-checked for staleness, exactly as `tokens.css` is.
+- Tests: every vocabulary entry has a shape; legend and draw agree; symbols stay legible at the smallest size; light and dark both pass contrast.
+- Symbols are **shape-first**, so no meaning depends on colour. The standard's oil-green and gas-red then become an optional, off-by-default colour layer, with a visible note that it is not colour-vision safe.
+
+Wildcat, Tulip and the rest then call `classify()` and `draw()`; their own data adapters stay in their repos.
+
+## Rules that keep the modules separate
+
+1. A layer reads **records and a view**; it does not read files or URLs.
+2. A layer **asserts its CRS**; the host refuses to compose layers with different ones.
+3. Vocabulary is the **Geostandard's** (and the Sodir values already mapped to it). Source vocabularies are translated in the adapter, in a table that is a data file, not code.
+4. Facts and legends are **data, not DOM**, so the same layer feeds a web viewer, a SubScout figure and a PNG export.
+5. Tokens only. No raw colour in any module (already tested in this repo).
+6. Each module has its own tests, and the **contract has a shared test** every layer must pass: asserts its CRS, returns bounds inside the view, draws without throwing on an empty view, has a legend and facts.
+
+## Roadmap
+
+0. **Prerequisites, small and independent.** Convert picks to ETRS89 in the build and rebuild the grids; verify the horizon depth datum against the well picks' TVDSS (Geostandard needs it as a title-box field).
+1. **Refactor this repo** to the layout above with the contract, no change in what the pages show. Add the shared contract test.
+2. **Faults as a vector layer**, from the Volve sticks and polygons, Geostandard line styles, black via `--ss-text`. Only plain and uncertain lines until type is known.
+3. **SubScout symbols spec** (needs your go-ahead to change that repo): style guide page, `symbols.toml`, generator, tests.
+4. **Wells**: the Volve adapter (well picks, perforations; names parsed per 3.2), the Sodir adapter for status and fluid, the well layer using SubScout symbols; wells over a surface, with the datum check.
+5. **Title box, scale bar and location map** as host components, fields exactly per the Geostandard.
+6. **Optional `geostandard` ramp and hydrocarbon colour set**; H and L marks; hachured depressions on isochores.
+
+## Open decisions
+
+- Are you happy for me to open a change in SubScout (symbols spec and style guide page), or do you want to review a draft in this repo first and move it across?
+- Where does the fault type and downthrown side come from for Volve? The sticks and polygons have names only. Candidates: derive it from the surfaces (throw direction), take it from the Volve reports, or leave it unknown.
+- Should the Sodir adapter be shared with Wildcat's `fetch_sodir.py` (one place, two consumers), or stay separate for now?
+- Standard terminology in Norwegian as an option, or English only?

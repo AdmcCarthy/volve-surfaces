@@ -36,7 +36,7 @@ Attribution line, to use everywhere:
   related grid: `XL(ST10010) = XL(ST0202)`, `IL(ST10010) = 2 x IL(ST0202) - 1`. About 184k nodes per horizon.
 - CRS: **ED50 / UTM zone 31N, EPSG:23031** (header says `ST_ED50_UTM31N_P23031_T1133`). The README says only "UTM 31N";
   the header settles the datum. Reproject to ETRS89 / UTM 31N (EPSG:25831) or WGS84 for display and to line up with Sodir
-  data. Datum shift is ED50 to ETRS89 (about 100 m; use the Norwegian grid transform, test the choice).
+  data. Datum shift ED50 to ETRS89 at Volve is about -90 m east and -215 m north (measured with pyproj, accuracy 2 m; an earlier note here said about 100 m, which was wrong). The canonical CRS is now ETRS89 / UTM 31N (EPSG:25831): see [modules.md](modules.md).
 - **Faults**: fixed-width fault sticks (x, y, TWT, stick position 1/2/3, name). **Fault polygons**: Top and Base Hugin
   (78 and 71 polygons). **Wells**: picks (with repeat observations) and perforations.
 - Not needed now: seismic cubes, well logs, production, WITSML (kept for later linking to the `ep_geoscience_analytics` work).

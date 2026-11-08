@@ -1,6 +1,6 @@
 # Contacts and structure: closures, saddles and faults
 
-Status: **steps 1 to 5 built, 2026-11-08** (the area-against-depth chart was added after steps 1 to 4; the robustness gates of step 6 are not built). The Volve fill the viewer draws by default has not changed: it is still the provided outline and barrier. Everything here is an **analysis layer** you switch on.
+Status: **paused on 2026-11-08 at your request; steps 1 to 5 built as they stand** (the area-against-depth chart was added after steps 1 to 4; the robustness gates of step 6 are not built). The Volve fill the viewer draws by default has not changed: it is still the provided outline and barrier. Everything here is an **analysis layer** you switch on.
 
 Decisions (yours, 2026-11-08): go with steps 1 and 2, then the 19BT2 test, up to step 4 but not 5. **Fault seal analysis is out of scope**: even small faults can be barriers to flow, and sealing depends on things outside this repository. So fault attributes here are measurements (throw, thickness, length, strike) and nothing in the code classes a fault as minor, leaky or sealing. The earlier idea of a "minor fault, never a barrier" class is dropped.
 
@@ -88,3 +88,16 @@ Open points for you: whether "minor" should mean below 10 or 15 m throw; whether
 Built: one chart per closure (up to six, the highest relief first) under the map when *Closure analysis* is on: the map area of the connected closure at each contact depth, from the crest to 40 m below its deepest spill, computed by a priority flood on the raw grid (`basin_curve` in `scripts/structure.py`, stored as `curve` in `closures.json`; `site/js/host/areachart.js`). Marked on it: the spill (solid), the spill if the data edge is a limit (dotted), the contacts of the case on show with P90, P50 and P10, and the wells in the closure (oil down to, water top). A jump in the curve is a merge with a neighbouring high; the Volve high's curve jumps at its 3,133 m saddle, and the 19BT2 water top (3,146 m) sits just after it. Map area, not volume. The charts are not in the PNG export yet.
 
 Not built: the robustness gates of section 5. That section stays the standard to meet before the tentative tier is allowed to extend the default fill.
+
+## 9. Where this stands (paused, 2026-11-08)
+
+Built and live, all switch-on analysis (the default Volve fill is unchanged): closures and spill points, fault throw measurements, well connections, the tentative tier, the area-against-depth charts. Tests, lint and the browser smoke run pass.
+
+Results as of now, in one place:
+
+- The Volve high (crest 2,802 m, relief 187 m) is **open at the south-west edge of the data at 2,990 m**; its saddle is at **3,133 m** only if that edge is just the limit of mapping.
+- At the base contact (3,120 m) the surface-connected area is **8.4 km²** against **4.8 km²** inside the provided limits: the surface alone would add **3.5 km²**, open at the data edge and with no well.
+- **19BT2** (water, top Hugin 3,146 m) is connected to both oil wells on the surface at 3,146 m, through the heave polygon of **fault 68** (throw about 111 m, 1.3 times the Hugin thickness). With fault 68 as a wall the pass moves to **3,186 m**. About 47 % of the PUD distribution is deeper than 3,146 m. A candidate separating element, not a seal analysis.
+- Fault throw (77 top-Hugin polygons, dip removed): median **23 m**, 12 above the Hugin thickness.
+
+Open, for when this resumes: the robustness gates (section 5) before the tentative tier may extend the default fill; the charts in the PNG export; whether the PUD pressure data can explain the 19BT2 separation.

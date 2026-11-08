@@ -2,7 +2,7 @@
 
 **Shaded contour maps of the Volve geophysical interpretations, generalised for fast, readable display in the browser (D3).**
 
-Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). Hydrocarbon contacts (built, with the Volve evidence): [docs/contacts.md](docs/contacts.md). Standards review: [docs/geostandard.md](docs/geostandard.md). Inventory: [docs/inventory.md](docs/inventory.md).
+Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). **Focus: rendering surfaces from seismic interpretations** (horizons as shaded, stepped or linear contour maps, faults, scale bar, title box, location map, PNG export). Standards review: [docs/geostandard.md](docs/geostandard.md). **Work in progress, not the base case, paused:** hydrocarbon contacts ([docs/contacts.md](docs/contacts.md)) and closure analysis ([docs/contacts-structure.md](docs/contacts-structure.md)); on the site under [Work in progress](https://admccarthy.github.io/volve-surfaces/wip.html) and in the viewer's collapsed *Work in progress* group. Inventory: [docs/inventory.md](docs/inventory.md).
 
 ```
 uv sync --all-groups

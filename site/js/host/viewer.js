@@ -24,6 +24,7 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
   if (!(k in defaults)) continue;
   state[k] = NUM.has(k) || (k === "step" && v !== "auto") ? Number(v) : v;
 }
+if (state.contacts === "on" || state.closures === "on") document.getElementById("wip").open = true;
 const sets = {};
 let sheet = null, g = null, info = null, layers = [], view = null;
 const faultData = {}, contactData = {}, closureData = {};

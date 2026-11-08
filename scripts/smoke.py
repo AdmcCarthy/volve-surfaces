@@ -84,6 +84,7 @@ async () => {
 """
 
 PAGES = [
+    ("wip", "wip.html", "canvas", "light"),
     (
         "viewer_closures",
         "viewer.html?x=1#closures=on&contacts=on&tentative=on&faults=polygons",

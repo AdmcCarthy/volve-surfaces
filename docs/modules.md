@@ -138,6 +138,8 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 - Should the Sodir adapter be shared with Wildcat's `fetch_sodir.py` (one place, two consumers), or stay separate for now?
 - Standard terminology in Norwegian as an option, or English only?
 
+> **Scope note (2026-11-08):** contacts and closure analysis are work in progress and paused; the base case is surface rendering. See CLAUDE.md.
+
 ## Map furniture (2026-11-08)
 
 | Part | Where | Notes |

@@ -102,7 +102,9 @@ function paintSwatches() {
 }
 $("ramps").replaceChildren(...["fjord", "cobalt", "shale", "div", "div_fjord"].map(swatches));
 
-for (const s of SECTIONS) {
+// the options page shows the surface treatments; the contacts section belongs to the work-in-progress page (wip.html)
+const WIP = document.body.dataset.page === "wip";
+for (const s of SECTIONS.filter((x) => (x.id === "contacts") === WIP)) {
   const sec = document.createElement("section");
   sec.className = "vs-section"; sec.id = s.id;
   sec.innerHTML = `<h2>${s.title}</h2><p class="vs-lead">${s.lead}</p><div class="vs-grid"></div>`;

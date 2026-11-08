@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WIP · Volve Surfaces · style options</title>
+<meta name="description" content="Editorial review of the Volve Surfaces map style: SubScout colour ramps, linear and stepped fills, smoothing, contours, shading and class breaks, on one Volve horizon.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/subscout/tokens.css">
+<link rel="stylesheet" href="css/subscout/base.css">
+<link rel="stylesheet" href="css/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+</head>
+<body data-page="wip">
+<header class="vs-top"><div class="ss-wrap">
+  <a class="vs-brand" href="./">Volve Surfaces</a>
+  <nav class="vs-nav"><a href="./">Style options</a><a href="viewer.html">Viewer</a><a href="wip.html" aria-current="page">Work in progress</a><a href="https://github.com/AdmcCarthy/volve-surfaces">GitHub</a></nav>
+</div></header>
+
+<main class="ss-wrap">
+  <section class="vs-hero">
+    <div class="ss-kicker">Work in progress</div>
+    <h1>Hydrocarbon contacts: not part of the base case</h1>
+    <p class="ss-standfirst">The repository is about rendering surfaces from seismic interpretations. These maps are an experiment on top of it: a hydrocarbon contact fill, per fault segment, with the Volve evidence. They are unfinished, partly digitised from a figure, and paused. Do not read them as results. The closure analysis and area-against-depth charts live in the viewer under the same heading.</p>
+    <div class="vs-ctl">
+      <span><label>Data</label><span id="c-set"></span></span>
+      <span><label>Scheme</label><span id="c-scheme"></span></span>
+    </div>
+  </section>
+
+  <section class="vs-section" hidden><h2>The ramps</h2>
+    <p class="vs-lead">Sequential ramps (seven steps) for depth and thickness, and diverging ramps (nine steps) for residuals. Steps are read from the live tokens; the stepped fills use them directly, the linear fills blend between them in Lab.</p>
+    <div class="vs-grid" id="ramps"></div></section>
+
+  <div id="sections"></div>
+</main>
+
+<footer class="ss-wrap vs-foot">
+  <p id="attr"></p>
+  <p>Not connected with, sponsored or endorsed by Equinor or the former Volve licence partners. Provided as is, with no warranty; the data may contain errors and omissions. These maps are smoothed for readability and are not for engineering decisions. Colours: <a href="https://github.com/AdmcCarthy/SubScout">SubScout</a> tokens (MIT; method from the Equinor Design System palette generator, MIT).</p>
+</footer>
+<script type="module" src="js/host/review.js"></script>
+</body>
+</html>

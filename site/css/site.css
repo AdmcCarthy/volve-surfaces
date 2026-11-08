@@ -79,3 +79,5 @@ footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
 .vs-chart { margin: 0; border: 1px solid var(--ss-border-subtle); border-radius: 8px; padding: 6px 8px; background: var(--ss-surface); }
 .vs-chart figcaption { font: 600 0.78rem var(--ss-font-body); color: var(--ss-text); }
 .vs-chart svg { width: 100%; height: auto; display: block; font-family: var(--ss-font-body); }
+.vs-wip { border-top: 1px solid var(--ss-border-subtle); padding-top: 8px; display: flex; flex-direction: column; gap: 14px; }
+.vs-wip > summary { cursor: pointer; font: 600 0.8rem var(--ss-font-body); color: var(--ss-text-subtle); }

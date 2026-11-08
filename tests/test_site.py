@@ -125,3 +125,17 @@ def test_stage_includes_the_context_and_the_pages_use_the_furniture(tmp_path):
     view = (SITE / "js" / "host" / "view.js").read_text(encoding="utf-8")
     assert "drawScaleBar" in view
     assert 'id="titlebox"' in (SITE / "viewer.html").read_text(encoding="utf-8")
+
+
+def test_base_pages_do_not_lead_with_work_in_progress():
+    # the options page and the viewer's open controls are about surfaces; contacts and closures sit under Work in progress
+    js = (SITE / "js" / "host" / "review.js").read_text(encoding="utf-8")
+    assert 'dataset.page === "wip"' in js
+    assert 'data-page="wip"' in (SITE / "wip.html").read_text(encoding="utf-8")
+    assert "data-page" not in (SITE / "index.html").read_text(encoding="utf-8")
+    viewer = (SITE / "viewer.html").read_text(encoding="utf-8")
+    wip = viewer[viewer.index('<details class="vs-wip"') : viewer.index("</details>")]
+    for control in ("c-contacts", "c-closures", "c-tentative"):
+        assert control in wip and viewer.index(control) > viewer.index(
+            '<details class="vs-wip"'
+        )

@@ -17,7 +17,7 @@
 <body>
 <header class="vs-top"><div class="ss-wrap">
   <a class="vs-brand" href="./">Volve Surfaces</a>
-  <nav class="vs-nav"><a href="./">Style options</a><a href="viewer.html" aria-current="page">Viewer</a><a href="https://github.com/AdmcCarthy/volve-surfaces">GitHub</a><div id="c-scheme"></div></nav>
+  <nav class="vs-nav"><a href="./">Style options</a><a href="viewer.html" aria-current="page">Viewer</a><a href="wip.html">Work in progress</a><a href="https://github.com/AdmcCarthy/volve-surfaces">GitHub</a><div id="c-scheme"></div></nav>
 </div></header>
 
 <main class="ss-wrap vs-viewer">
@@ -35,6 +35,8 @@
     <div class="vs-field"><span>Shading</span><div id="c-shade"></div></div>
     <div class="vs-field" id="f-light"><span>Shading light</span><div id="c-light"></div></div>
     <div class="vs-field"><span>Faults</span><div id="c-faults"></div><small class="vs-hint" id="f-faults-note"></small></div>
+    <details class="vs-wip" id="wip"><summary>Work in progress: closures and hydrocarbon contacts</summary>
+<p class="vs-hint">Experimental and paused, not part of the base case. Partly digitised from a figure; see docs/contacts-structure.md.</p>
     <div class="vs-field"><span>Closure analysis</span><div id="c-closures"></div><small class="vs-hint" id="f-closures-note"></small><small class="vs-hint">Highs and spill points from the 25 m grid. Where the surface could hold a contact, not a proven trap.</small></div>
     <div class="vs-field"><span>Hydrocarbon contacts</span><div id="c-contacts"></div><small class="vs-hint" id="f-contacts-note"></small></div>
     <div class="vs-field" id="f-tentative" hidden><span>Tentative fill</span><div id="c-tentative"></div><small class="vs-hint">What the surface alone would add beyond the provided limits.</small></div>
@@ -42,6 +44,7 @@
     <div class="vs-field" id="f-ccolour" hidden><span>Column colour</span><div id="c-ccolour"></div></div>
     <div class="vs-field" id="f-cfade" hidden><span>Uncertainty</span><div id="c-cfade"></div></div>
     <div class="vs-field" id="f-cpalette" hidden><span>Contact colours</span><div id="c-cpalette"></div><small class="vs-hint">Geostandard: oil green, gas red. Not colour-vision safe.</small></div>
+    </details>
     <div class="vs-field"><span>Export</span><button type="button" class="ss-seg-btn" id="b-export" title="Download the map, title box, scale bar and legend as one PNG">Export PNG</button></div>
   </aside>
   <section>

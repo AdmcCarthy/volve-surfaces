@@ -173,6 +173,18 @@ def main(out: Path) -> int:
         fill_problems = page.evaluate(FILL)
         print(f"contacts fill and probability: {len(fill_problems)} problems")
         failures += [f"contacts: {p}" for p in fill_problems]
+        page.goto(base + "viewer.html#contacts=on")
+        page.wait_for_selector(".vs-tb-loc canvas")
+        page.wait_for_timeout(1500)
+        with page.expect_download() as dl:
+            page.click("#b-export")
+        png = out / "export.png"
+        dl.value.save_as(png)
+        data = png.read_bytes()
+        w, h = int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+        print(f"png export: {w} x {h}, {len(data) // 1000} kB")
+        if data[1:4] != b"PNG" or w < 800 or h < w:
+            failures.append(f"png export: bad file {w} x {h}")
         browser.close()
     httpd.shutdown()
     for f in failures:

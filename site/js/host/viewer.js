@@ -6,6 +6,7 @@ import { createSurfaceLayer } from "../layers/surface.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { createContactsLayer, loadContacts } from "../layers/contacts.js";
 import { compose, probeAll } from "./view.js";
+import { sheetCanvas, downloadPng } from "./export.js";
 import { titleRows, renderTitleBox, drawLocator } from "./titlebox.js";
 import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, renderEntries, factsHTML, store } from "./ui.js";
 
@@ -21,7 +22,7 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
   state[k] = NUM.has(k) || (k === "step" && v !== "auto") ? Number(v) : v;
 }
 const sets = {};
-let g = null, info = null, layers = [], view = null;
+let sheet = null, g = null, info = null, layers = [], view = null;
 const faultData = {}, contactData = {};
 let contextData = null;
 
@@ -69,7 +70,8 @@ async function draw() {
   layers = ls;
   view = compose($("map"), layers, { furniture: true });
   info = surface.legend();
-  renderTitleBox($("titlebox"), titleRows({ g, bounds: layers[0].bounds(), contour: state.contour, contacts: layers.some((l) => l.id === "contacts") }));
+  const rows = titleRows({ g, bounds: layers[0].bounds(), contour: state.contour, contacts: layers.some((l) => l.id === "contacts") });
+  renderTitleBox($("titlebox"), rows);
   const loc = $("titlebox").querySelector(".vs-tb-loc");
   if (g.manifest.synthetic) loc.replaceChildren(Object.assign(document.createElement("small"), { className: "vs-hint", textContent: "Synthetic data: no real location." }));
   else {
@@ -95,6 +97,7 @@ async function draw() {
   const crsName = { "EPSG:25831": "ETRS89 / UTM 31N" }[g.manifest.crs] ?? g.manifest.crs;
   $("sub").textContent = `${g.domain === "twt" ? "ms TWT" : g.manifest.synthetic ? "m, synthetic datum" : "m below mean sea level, positive down"} · ${crsName} (${g.manifest.crs.replace("EPSG:", "EPSG ")}) · 25 m grid`;
   $("attr").textContent = g.manifest.synthetic ? g.manifest.attribution : ATTRIBUTION;
+  sheet = { title: $("title").textContent, sub: $("sub").textContent, rows, info, entries: layers.slice(1).flatMap((l) => l.legend()).filter((e) => e.label), facts: layers.flatMap((l, i) => l.facts(i === 0 ? {} : undefined)), attribution: $("attr").textContent, name: `volve-surfaces-${state.set}-${state.h}.png` };
 }
 
 // controls
@@ -114,6 +117,13 @@ bind("c-cfade", "cfade", [["on", "Fade"], ["off", "None"]]);
 bind("c-cpalette", "cpalette", [["subscout", "SubScout"], ["geostandard", "Geostandard"]]);
 $("c-ccase").addEventListener("change", (e) => { state.ccase = e.target.value; draw(); });
 const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); draw(); });
+
+// PNG export: the map with scale bar, title box, location map, colour bar, method and attribution
+$("b-export").addEventListener("click", () => {
+  if (!sheet) return;
+  const locator = $("titlebox").querySelector(".vs-tb-loc canvas");
+  downloadPng(sheetCanvas({ ...sheet, map: $("map"), mapCssWidth: view.width, locator }), sheet.name);
+});
 
 // colour range: typed values are kept until Reset or a new horizon
 const setRange = (key, el) => el.addEventListener("change", () => { state[key] = el.value === "" ? null : Number(el.value); draw(); });

@@ -146,4 +146,6 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 | Title box | `site/js/host/titlebox.js` | Geostandard field names (map type, horizon, field, block and licence, area, coverage in UTM format, projection, datums, contour interval, date); inspired by, not bound to, the standard; the method and confidence stay in the fact strip |
 | Location map | `drawLocator` in `titlebox.js`; data `data/context/north_sea.json` from `scripts/context.py` | Land and fields from Wildcat's Sodir layers (NLOD 2.0); real data only; the synthetic map says it has no real location |
 
-Not done: a 1:n scale ratio (a screen has none), revision and approval fields, export to PNG or PDF.
+PNG export: `host/export.js` draws one sheet (title, map with scale bar, title box, location map, colour bar, layer names, method rows, attribution and disclaimer) in the on-screen scheme; the viewer's *Export PNG* button. Layer legends are exported as names only, without swatches.
+
+Not done: a 1:n scale ratio (a screen has none), revision and approval fields, PDF export, export from the options page.

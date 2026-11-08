@@ -133,6 +133,14 @@ def sample(grid: np.ndarray, x0: float, y0: float, pts: np.ndarray) -> np.ndarra
     return map_coordinates(grid, [cy, cx], order=1, mode="constant", cval=np.nan)
 
 
+def quantise(grid: np.ndarray) -> tuple[np.ndarray, float, float, float]:
+    """Uint16 encoding of a float grid (NaN -> NODATA): (values, z_min, z_max, scale); z = z_min + value * scale."""
+    zmin, zmax = float(np.nanmin(grid)), float(np.nanmax(grid))
+    scale = (zmax - zmin) / (NODATA - 1)
+    q = np.where(np.isnan(grid), NODATA, np.rint((grid - zmin) / scale)).astype("<u2")
+    return q, zmin, zmax, scale
+
+
 def build(zip_path: str, out_dir: str = "data/out") -> None:
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -147,11 +155,7 @@ def build(zip_path: str, out_dir: str = "data/out") -> None:
     for hid, (name, df, nsec, label, domain, unit) in data.items():
         pts, z = df[["x", "y"]].to_numpy(), df["z"].to_numpy()
         grid = resample(pts, z, x0, y0, nx, ny)
-        zmin, zmax = float(np.nanmin(grid)), float(np.nanmax(grid))
-        scale = (zmax - zmin) / (NODATA - 1)
-        q = np.where(np.isnan(grid), NODATA, np.rint((grid - zmin) / scale)).astype(
-            "<u2"
-        )
+        q, zmin, zmax, scale = quantise(grid)
         (out / f"{hid}.bin").write_bytes(q.tobytes())
         err = sample(grid, x0, y0, pts) - z
         err = err[~np.isnan(err)]

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volve Surfaces · style options</title>
+<meta name="description" content="Editorial review of the Volve Surfaces map style: SubScout colour ramps, linear and stepped fills, smoothing, contours, shading and class breaks, on one Volve horizon.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/subscout/tokens.css">
+<link rel="stylesheet" href="css/subscout/base.css">
+<link rel="stylesheet" href="css/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+</head>
+<body>
+<header class="vs-top"><div class="ss-wrap">
+  <a class="vs-brand" href="./">Volve Surfaces</a>
+  <nav class="vs-nav"><a href="./" aria-current="page">Style options</a><a href="viewer.html">Viewer</a><a href="https://github.com/AdmcCarthy/volve-surfaces">GitHub</a></nav>
+</div></header>
+
+<main class="ss-wrap">
+  <section class="vs-hero">
+    <div class="ss-kicker">Editorial review</div>
+    <h1>How should the Volve surfaces look?</h1>
+    <p class="ss-standfirst">Every map below is the same horizon, the top of the Hugin Formation in depth, drawn with a different treatment. Colours come straight from SubScout's tokens, in light and dark. Nothing is hard-coded here, so a change to the palette in SubScout changes these maps.</p>
+    <div class="vs-decide"><strong>What to decide</strong>
+      <ol>
+        <li>Which SubScout ramp: fjord (Tide), cobalt (Signal) or shale (Frost).</li>
+        <li>Linear gradient or stepped classes, as the default fill.</li>
+        <li>How much to smooth. Each map states how far it moves from the source.</li>
+        <li>Contour lines and shading: none, quiet, or both.</li>
+        <li>Class breaks: rounded numbers, equal interval or quantile.</li>
+        <li>Which end is the strongest colour: the deepest or the shallowest.</li>
+      </ol></div>
+    <div class="vs-ctl">
+      <span><label>Data</label><span id="c-set"></span></span>
+      <span><label>Scheme</label><span id="c-scheme"></span></span>
+      <span><label>Strongest colour</label><span id="c-emph"></span></span>
+    </div>
+  </section>
+
+  <section class="vs-section"><h2>The ramps</h2>
+    <p class="vs-lead">Sequential ramps (seven steps) for depth and thickness, and diverging ramps (nine steps) for residuals. Steps are read from the live tokens; the stepped fills use them directly, the linear fills blend between them in Lab.</p>
+    <div class="vs-grid" id="ramps"></div></section>
+
+  <div id="sections"></div>
+</main>
+
+<footer class="ss-wrap vs-foot">
+  <p id="attr"></p>
+  <p>Not connected with, sponsored or endorsed by Equinor or the former Volve licence partners. Provided as is, with no warranty; the data may contain errors and omissions. These maps are smoothed for readability and are not for engineering decisions. Colours: <a href="https://github.com/AdmcCarthy/SubScout">SubScout</a> tokens (MIT; method from the Equinor Design System palette generator, MIT).</p>
+</footer>
+<script type="module" src="js/review.js"></script>
+</body>
+</html>

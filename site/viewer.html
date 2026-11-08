@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Volve Surfaces · viewer</title>
+<meta name="description" content="Interactive shaded contour maps of the Volve geophysical interpretations, generalised for display: linear or stepped fills, contours and soft shading.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="css/subscout/tokens.css">
+<link rel="stylesheet" href="css/subscout/base.css">
+<link rel="stylesheet" href="css/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+</head>
+<body>
+<header class="vs-top"><div class="ss-wrap">
+  <a class="vs-brand" href="./">Volve Surfaces</a>
+  <nav class="vs-nav"><a href="./">Style options</a><a href="viewer.html" aria-current="page">Viewer</a><a href="https://github.com/AdmcCarthy/volve-surfaces">GitHub</a><div id="c-scheme"></div></nav>
+</div></header>
+
+<main class="ss-wrap vs-viewer">
+  <aside class="vs-panel" aria-label="Map controls">
+    <div class="vs-field"><span>Data</span><div id="c-set"></div></div>
+    <div class="vs-field" style="width:100%"><span>Horizon</span><select id="c-h" aria-label="Horizon"></select></div>
+    <div class="vs-field"><span>Fill</span><div id="c-fill"></div></div>
+    <div class="vs-field"><span>Colour (SubScout ramp)</span><div id="c-ramp"></div></div>
+    <div class="vs-field"><span>Strongest colour</span><div id="c-emph"></div></div>
+    <div class="vs-field" id="f-classes"><span>Classes (target)</span><div id="c-classes"></div></div>
+    <div class="vs-field" id="f-method"><span>Class breaks</span><div id="c-method"></div></div>
+    <div class="vs-field"><span>Detail (smoothing)</span><div id="c-detail"></div></div>
+    <div class="vs-field"><span>Contours</span><div id="c-contours"></div></div>
+    <div class="vs-field"><span>Shading</span><div id="c-shade"></div></div>
+  </aside>
+  <section>
+    <figure class="ss-figure vs-fig" id="fig">
+      <div class="vs-badge" id="badge">Generalised for display</div>
+      <figcaption><p class="ss-fig-title" id="title"></p><p class="ss-fig-sub" id="sub"></p></figcaption>
+      <div style="position:relative"><canvas id="map" role="img" aria-label="Contour map of the selected horizon"></canvas><div class="vs-read" id="read"></div></div>
+      <div id="legend"></div>
+      <div id="facts"></div>
+    </figure>
+  </section>
+</main>
+
+<footer class="ss-wrap vs-foot">
+  <p id="attr"></p>
+  <p>Not connected with, sponsored or endorsed by Equinor or the former Volve licence partners. Provided as is, with no warranty; the data may contain errors and omissions. Maps are smoothed for readability and are not for engineering decisions. Colours: <a href="https://github.com/AdmcCarthy/SubScout">SubScout</a> tokens (MIT; method from the Equinor Design System palette generator, MIT).</p>
+</footer>
+<script type="module" src="js/viewer.js"></script>
+</body>
+</html>

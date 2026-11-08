@@ -1,0 +1,49 @@
+/* Page chrome for the viewer and the review page. Colour comes only from SubScout tokens (css/subscout/tokens.css). */
+
+.vs-top { position: sticky; top: 0; z-index: 5; background: color-mix(in oklab, var(--ss-canvas) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--ss-border-subtle); }
+.vs-top .ss-wrap { display: flex; gap: 12px 20px; align-items: center; justify-content: space-between; padding-block: 8px; flex-wrap: wrap; }
+.vs-brand { font: 500 1.1rem var(--ss-font-display); color: var(--ss-text); text-decoration: none; letter-spacing: -0.01em; }
+.vs-nav { display: flex; gap: 14px; font-size: var(--ss-size-caption); align-items: center; flex-wrap: wrap; }
+.vs-nav a { color: var(--ss-text-muted); }
+.vs-nav a[aria-current="page"] { color: var(--ss-text); font-weight: 600; }
+
+.vs-hero { padding-block: var(--ss-space-xxl) var(--ss-space-l); }
+.vs-hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); max-width: 22ch; margin-block: 10px 14px; }
+.vs-decide { background: var(--ss-surface); border: 1px solid var(--ss-border-subtle); border-radius: var(--ss-radius-l); padding: var(--ss-space-m) var(--ss-space-l); margin-top: var(--ss-space-l); font-size: var(--ss-size-label); }
+.vs-decide ol { margin: 6px 0 0; padding-left: 1.2em; } .vs-decide li { margin-bottom: 3px; }
+.vs-ctl { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: var(--ss-space-l); }
+.vs-ctl label, .vs-field > span { font: 500 0.72rem var(--ss-font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ss-text-muted); margin-right: 6px; }
+
+.vs-section { padding-block: var(--ss-space-xl) var(--ss-space-m); }
+.vs-section h2 { margin-bottom: 6px; }
+.vs-lead { max-width: 68ch; color: var(--ss-text-subtle); margin: 0 0 var(--ss-space-m); font-size: var(--ss-size-label); }
+.vs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 31rem), 1fr)); gap: var(--ss-space-l); }
+.vs-card { display: flex; flex-direction: column; gap: 6px; }
+.vs-card canvas, .vs-fig canvas { display: block; width: 100%; height: auto; }
+.vs-card .vs-note { font-size: var(--ss-size-caption); color: var(--ss-text-muted); margin: 0; line-height: 1.5; }
+.vs-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 2px; }
+.vs-tag { font: 500 0.66rem var(--ss-font-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ss-text-muted); background: var(--ss-surface-raised); padding: 2px 6px; border-radius: var(--ss-radius); }
+.vs-card .ss-facts { margin-top: 6px; gap: 2px 14px; }
+
+/* legend: stepped cells at equal width, or the gradient; ticks below */
+.vs-legend { margin: 8px 14px 2px; }
+.vs-bar { height: 12px; border-radius: 2px; overflow: hidden; border: 1px solid var(--ss-border-subtle); }
+.vs-bar i { display: block; }
+.vs-ticks { position: relative; height: 1.3em; font-size: 0.72rem; color: var(--ss-text-muted); font-variant-numeric: tabular-nums; }
+.vs-ticks span { position: absolute; top: 2px; transform: translateX(-50%); white-space: nowrap; }
+.vs-unit { font-size: 0.72rem; color: var(--ss-text-muted); text-align: right; }
+
+/* viewer */
+.vs-viewer { display: grid; grid-template-columns: minmax(15rem, 20rem) minmax(0, 1fr); gap: var(--ss-space-l); padding-block: var(--ss-space-l) var(--ss-space-xxl); align-items: start; }
+@media (max-width: 860px) { .vs-viewer { grid-template-columns: minmax(0, 1fr); } }
+.vs-panel { display: flex; flex-direction: column; gap: 14px; background: var(--ss-surface); border: 1px solid var(--ss-border-subtle); border-radius: var(--ss-radius-l); padding: var(--ss-space-m); }
+.vs-field { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+.vs-field .ss-seg { flex-wrap: wrap; border-radius: 14px; }
+.vs-field select { font: 500 14px var(--ss-font-body); padding: 7px 10px; border-radius: var(--ss-radius-l); border: 1px solid var(--ss-border); background: var(--ss-surface); color: var(--ss-text); width: 100%; }
+.vs-fig { position: relative; }
+.vs-badge { display: inline-flex; gap: 6px; align-items: center; font: 600 0.74rem var(--ss-font-body); color: var(--ss-text-subtle); border: 1px solid var(--ss-border); border-radius: 999px; padding: 2px 10px; margin-bottom: 6px; }
+.vs-read { position: absolute; right: 8px; top: 8px; font: 500 0.75rem var(--ss-font-mono); background: color-mix(in oklab, var(--ss-surface) 88%, transparent); border: 1px solid var(--ss-border-subtle); border-radius: 6px; padding: 4px 8px; color: var(--ss-text); pointer-events: none; opacity: 0; transition: opacity var(--ss-dur-fast); }
+.vs-read.on { opacity: 1; }
+.vs-err { padding: 24px; color: var(--ss-text-muted); }
+footer.vs-foot { margin-block: var(--ss-space-xxl) var(--ss-space-xl); padding-top: var(--ss-space-m); border-top: 1px solid var(--ss-border-subtle); font-size: var(--ss-size-caption); color: var(--ss-text-muted); }
+footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }

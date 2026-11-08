@@ -144,7 +144,7 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 |---|---|---|
 | Scale bar and north arrow | `site/js/host/furniture.js`, called by `compose(..., { furniture: true })` | Round length up to a quarter of the map width, four alternating blocks; on the canvas so exports include it |
 | Title box | `site/js/host/titlebox.js` | Geostandard field names (map type, horizon, field, block and licence, area, coverage in UTM format, projection, datums, contour interval, date); inspired by, not bound to, the standard; the method and confidence stay in the fact strip |
-| Location map | `drawLocator` in `titlebox.js`; data `data/context/north_sea.json` from `scripts/context.py` | Land and fields from Wildcat's Sodir layers (NLOD 2.0); real data only; the synthetic map says it has no real location |
+| Location map | `drawLocator` in `titlebox.js`; data `data/context/` from `scripts/context.py` | Relief's `north_sea` overview layers (Copernicus DEM, EMODnet Bathymetry) drawn in Relief's own CRS (EPSG:25832, no reprojection in the browser) with Relief's Detuned palette (vendored in `vendor/relief/`); neighbouring fields from Wildcat's Sodir layers (NLOD 2.0) as outlines; the map frame in a strong ring; about 125 kB; real data only |
 
 PNG export: `host/export.js` draws one sheet (title, map with scale bar, title box, location map, colour bar, layer names, method rows, attribution and disclaimer) in the on-screen scheme; the viewer's *Export PNG* button. Layer legends are exported as names only, without swatches.
 

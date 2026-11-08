@@ -97,17 +97,26 @@ def test_contacts_layer_uses_the_surface_module_but_never_another_layer_or_the_h
     )  # compute from the surface module, symbols from SubScout
 
 
-def test_context_for_the_location_map_holds_the_volve_field_and_frame():
+def test_context_for_the_location_map_holds_the_volve_field_and_frame_in_reliefs_crs():
     import json
 
     ctx = json.loads(
         (ROOT / "data" / "context" / "north_sea.json").read_text(encoding="utf-8")
     )
+    assert ctx["crs"] == "EPSG:25832"
     assert any(f["properties"]["name"] == "VOLVE" for f in ctx["fields"]["features"])
-    lon = [p[0] for p in ctx["extent"]]
-    lat = [p[1] for p in ctx["extent"]]
-    assert 1.7 < min(lon) < max(lon) < 2.1 and 58.3 < min(lat) < max(lat) < 58.6
-    assert "NLOD" in ctx["attribution"]
+    wx0, wy0, wx1, wy1 = ctx["window"]
+    assert all(wx0 < x < wx1 and wy0 < y < wy1 for x, y in ctx["extent"])
+    base = json.loads(
+        (ROOT / "data" / "context" / ctx["base"]).read_text(encoding="utf-8")
+    )
+    assert {f["properties"]["kind"] for f in base["features"]} == {"land", "sea"}
+    assert base["bbox"][0] <= wx0 and base["bbox"][2] >= wx1
+    assert (
+        "Copernicus" in ctx["attribution"]
+        and "EMODnet" in ctx["attribution"]
+        and "NLOD" in ctx["attribution"]
+    )
 
 
 def test_stage_includes_the_context_and_the_pages_use_the_furniture(tmp_path):

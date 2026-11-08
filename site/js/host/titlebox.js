@@ -1,6 +1,7 @@
 // The title box: identification of the map (in the order and wording of the Sodir Geostandard's title block, which is a guide here, not a rule),
 // then the coordinate system, and a location map. Rows come from the manifest and the layers, nothing is typed by hand per map.
 import { token } from "../style/ramps.js";
+import { detunedStyle, rampAt } from "../vendor/relief/palette.js";
 
 const FIELD = { name: "Volve", block: "15/9", licence: "PL 046", area: "Utsira High", country: "Norway" };
 const fmtN = d3.format(".0f");
@@ -42,38 +43,45 @@ export function renderTitleBox(el, rows) {
   el.prepend(dl);
 }
 
-// Fill or stroke GeoJSON polygons by hand on a planar projection: the source rings are not wound for the sphere, which d3.geoPath would read as "everything but this".
+// Draw GeoJSON polygons by hand in a planar frame (Relief's metres): d3.geoPath would read unwound rings as the sphere's complement.
 function geoPath(ctx, geo, proj) {
   const feats = geo.features ?? [geo];
   ctx.beginPath();
   for (const f of feats) {
-    const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+    const g = f.geometry ?? f, polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
     for (const rings of polys) for (const ring of rings) ring.forEach((p, i) => { const [x, y] = proj(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
   }
 }
 
-// Location map: land, neighbouring fields, the field in the accent colour, the map frame ringed so it stays visible at regional scale.
-export function drawLocator(canvas, ctxData, { width = 220 } = {}) {
-  const [w, s, e, n] = ctxData.window, dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const proj = d3.geoMercator().fitWidth(width, { type: "MultiPoint", coordinates: [[w, s], [e, n]] });
-  const height = Math.round(proj([w, s])[1] - proj([e, n])[1]);
+// Mid-point of each stacked level to the next, so a level takes the colour of the band it opens (the last band is as wide as the one before).
+const mids = (levels) => levels.map((v, i) => (i + 1 < levels.length ? (v + levels[i + 1]) / 2 : v + (v - levels[i - 1]) / 2));
+
+// Location map on Relief's base (north_sea, overview): stacked land and sea-floor polygons in the Detuned style, land tints at half strength
+// and a wide indigo sea, so the strong ring around the map frame is the one thing that stands out. Everything is in Relief's CRS, drawn planar.
+export function drawLocator(canvas, ctxData, base, { width = 220 } = {}) {
+  const [wx0, wy0, wx1, wy1] = ctxData.window, dpr = Math.min(window.devicePixelRatio || 1, 2), height = Math.round((width * (wy1 - wy0)) / (wx1 - wx0));
+  const k = width / (wx1 - wx0), proj = ([x, y]) => [(x - wx0) * k, (wy1 - y) * k];
   canvas.width = width * dpr; canvas.height = height * dpr;
   canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
-  const ctx = canvas.getContext("2d"), field = (volve) => ({ features: ctxData.fields.features.filter((f) => (f.properties.name === "VOLVE") === volve) });
+  const ctx = canvas.getContext("2d"), st = detunedStyle(document.documentElement.dataset.colourScheme === "dark" ? "dark" : "light");
+  const sea = base.features.filter((f) => f.properties.kind === "sea"), land = base.features.filter((f) => f.properties.kind === "land");
+  const seaMid = mids(sea.map((f) => -f.properties.level)), landMid = mids(land.map((f) => f.properties.level));
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.fillStyle = token("--ss-surface"); ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = token("--ss-text-subtle"); ctx.strokeStyle = token("--ss-text-subtle"); ctx.lineWidth = 0.8;
-  ctx.globalAlpha = 0.22; geoPath(ctx, ctxData.land, proj); ctx.fill("evenodd"); ctx.globalAlpha = 0.7; ctx.stroke();
-  ctx.fillStyle = token("--ss-text-subtle"); ctx.globalAlpha = 0.6;
-  geoPath(ctx, field(false), proj); ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = token("--ss-accent"); ctx.strokeStyle = token("--ss-accent");
-  geoPath(ctx, field(true), proj); ctx.fill();
-  const ring = d3.polygonCentroid(ctxData.extent.map((p) => proj(p)));
-  ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(ring[0], ring[1], 9, 0, 2 * Math.PI); ctx.stroke();
-  ctx.fillStyle = token("--ss-text"); ctx.font = `600 11px ${token("--ss-font-body")}`; ctx.textBaseline = "middle";
-  ctx.fillText("Volve", ring[0] + 14, ring[1]);
-  ctx.fillStyle = token("--ss-text-muted"); ctx.font = `500 10px ${token("--ss-font-body")}`;
-  ctx.textAlign = "right"; ctx.fillText("Norway", width - 8, 14); ctx.textAlign = "left";
+  ctx.fillStyle = rampAt(st.sea, seaMid[0] / st.seaMax); ctx.fillRect(0, 0, width, height);
+  sea.forEach((f, i) => { if (i) { geoPath(ctx, f, proj); ctx.fillStyle = rampAt(st.sea, seaMid[i] / st.seaMax); ctx.fill("evenodd"); } });
+  land.forEach((f, i) => { geoPath(ctx, f, proj); ctx.fillStyle = rampAt(st.zones.boreal, landMid[i] / st.landMax); ctx.fill("evenodd"); });
+  geoPath(ctx, land[0], proj); ctx.strokeStyle = token("--ss-text-subtle"); ctx.globalAlpha = 0.6; ctx.lineWidth = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+  const feats = ctxData.fields.features, volve = feats.filter((f) => f.properties.name === "VOLVE");
+  ctx.strokeStyle = token("--ss-text-subtle"); ctx.globalAlpha = 0.5; ctx.lineWidth = 0.7;
+  geoPath(ctx, { features: feats.filter((f) => !volve.includes(f)) }, proj); ctx.stroke(); ctx.globalAlpha = 1;
+  // the one strong mark: the map frame, ringed
+  const [cx, cy] = proj([d3.mean(ctxData.extent, (p) => p[0]), d3.mean(ctxData.extent, (p) => p[1])]);
+  ctx.strokeStyle = token("--ss-accent"); ctx.fillStyle = token("--ss-accent");
+  geoPath(ctx, { features: volve }, proj); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
+  ctx.strokeStyle = token("--ss-surface"); ctx.lineWidth = 5.5; ctx.stroke(); // halo, so the ring reads on any base colour
+  ctx.strokeStyle = token("--ss-accent"); ctx.lineWidth = 2.4; ctx.stroke();
+  ctx.font = `600 11px ${token("--ss-font-body")}`; ctx.textBaseline = "middle"; ctx.lineWidth = 3; ctx.lineJoin = "round";
+  ctx.strokeStyle = token("--ss-surface"); ctx.fillStyle = token("--ss-text"); ctx.strokeText("Volve", cx + 15, cy); ctx.fillText("Volve", cx + 15, cy);
   ctx.strokeStyle = token("--ss-border"); ctx.lineWidth = 1; ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
 }

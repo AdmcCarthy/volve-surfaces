@@ -28,7 +28,8 @@ let contextData = null;
 
 const getSet = (name) => (sets[name] ??= loadSet(`data/${name}`));
 const getFaults = (name) => (faultData[name] ??= loadFaults(`data/${name}`));
-const getContext = () => (contextData ??= fetch("data/context/north_sea.json").then((r) => { if (!r.ok) throw new Error("no context"); return r.json(); }));
+const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.json(); });
+const getContext = () => (contextData ??= getJson("data/context/north_sea.json").then(async (c) => ({ ...c, baseData: await getJson(`data/context/${c.base}`) })));
 const getContacts = (name) => (contactData[name] ??= loadContacts(`data/${name}`));
 // the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
 const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
@@ -81,7 +82,7 @@ async function draw() {
       const c = document.createElement("canvas");
       c.setAttribute("role", "img"); c.setAttribute("aria-label", "Location map: the Volve field on the Utsira High, North Sea");
       loc.replaceChildren(c, Object.assign(document.createElement("small"), { className: "vs-hint", textContent: cd.attribution }));
-      drawLocator(c, cd);
+      drawLocator(c, cd, cd.baseData);
     } else loc.replaceChildren();
   }
   renderLegend($("legend"), info);
@@ -122,7 +123,8 @@ const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], docume
 $("b-export").addEventListener("click", () => {
   if (!sheet) return;
   const locator = $("titlebox").querySelector(".vs-tb-loc canvas");
-  downloadPng(sheetCanvas({ ...sheet, map: $("map"), mapCssWidth: view.width, locator }), sheet.name);
+  const credit = $("titlebox").querySelector(".vs-tb-loc small")?.textContent;
+  downloadPng(sheetCanvas({ ...sheet, attribution: credit ? `${sheet.attribution} ${credit}` : sheet.attribution, map: $("map"), mapCssWidth: view.width, locator }), sheet.name);
 });
 
 // colour range: typed values are kept until Reset or a new horizon

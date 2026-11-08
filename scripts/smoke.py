@@ -84,6 +84,12 @@ async () => {
 """
 
 PAGES = [
+    (
+        "viewer_contacts_standard",
+        "viewer.html#set=synthetic&contacts=on&ccase=model&cpalette=geostandard&faults=polygons",
+        "canvas#map",
+        "light",
+    ),
     ("viewer", "viewer.html#shade=0.5", "canvas#map", "light"),
     ("viewer_faults", "viewer.html#faults=both&shade=0.5", "canvas#map", "light"),
     (

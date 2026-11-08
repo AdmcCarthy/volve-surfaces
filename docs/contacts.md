@@ -82,12 +82,12 @@ confident outline. A seed below every contact gives an empty segment. A fill nev
   the synthetic data only.
 - The OWC is drawn flat: no transition zone, no tilt (hydrodynamics), no FWL surface. Areas are map areas, not volumes.
 - Contacts apply to the top-Hugin depth map; the control is disabled for other horizons and for time.
-- **Not built:** the Geostandard colour and contact-line preset (option G), and the standard's contact-line styles (a black dash with red or green). Hatch patterns and symbols for fluid belong in SubScout
-  (`symbols.toml`) if wanted; the hatched barrier is drawn here for now.
+- **The Geostandard preset** (oil green, gas red from 6.12; contact lines black with a red dash for the OWC and a green dash for the GWC, 6.27) is built, **off by default** and flagged in the legend and facts as not
+  colour-vision safe. The standard gives no style for the gas-oil contact, so that line keeps its own dash-dot. The colours come from the vendored SubScout symbol data, not from hex in this repo.
 - Pressure-derived contacts (the FWL from formation pressure, as `ep_geoscience` does) need pressure data this repo does not hold.
 
-## 7. Open questions
+## 7. Decisions taken (second round, 2026-11-08)
 
-1. Should the barrier line become a SubScout line style (alongside the Geostandard fault styles), so mapping repos can reuse it?
-2. Is the outline-as-trap-limit assumption acceptable for the north segment, or should it be a sealing fault from our own fault polygons once you have looked at the digitised line on the map?
-3. Add the Geostandard colour preset (oil green, gas red, the contact-line styles), off by default and flagged not colour-vision safe?
+1. **The barrier line style lives in this repo.** This is the home of contour-based work for subsurface interpretation: surfaces, faults, barriers, contact lines and fills, and their line styles are owned here. SubScout keeps tokens and point symbols (wells, installations).
+2. **The model outline as the trap limit is accepted** for the north and south segments. It stays an explicit, labelled assumption ("held by the model outline"), with the digitising accuracy stated.
+3. **The Geostandard colour and contact-line preset is built**, off by default (the viewer's *Contact colours* control and two *G* cards on the options page).

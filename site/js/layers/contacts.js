@@ -9,7 +9,7 @@ import { computeFill, fluidAt, probAt, quantiles } from "../surface/fill.js";
 import { autoStep } from "../surface/grid.js";
 import { bilinear } from "../surface/render.js";
 import { hueRamp, lut, classColours, token } from "../style/ramps.js";
-import { drawSymbol, wellSpec, symbolSvg } from "../vendor/subscout/symbols.js";
+import { drawSymbol, wellSpec, symbolSvg, fluidInk, data as symbolData } from "../vendor/subscout/symbols.js";
 
 export async function loadContacts(base) {
   const res = await fetch(`${base}/contacts.json`);
@@ -22,9 +22,10 @@ const KIND_NAME = { OWC: "oil-water contact", GOC: "gas-oil contact", GWC: "gas-
 const fmt = d3.format(",.0f"), fmt1 = d3.format(",.1f");
 const shortWell = (n) => n.replace(/^NO 15\/9-/, "").replace(/^19 /, "19");
 
-// opts: { caseId, prepared (the surface layer's prepared grid), fill, lines, wells, barrier, outline, fade, colour: "continuous" | "stepped", columnStep }
+// opts: { caseId, prepared (the surface layer's prepared grid), fill, lines, wells, barrier, outline, fade, colour: "continuous" | "stepped", columnStep,
+//         standard: the Geostandard colours (6.12) and contact-line styles (6.27) instead of the SubScout hues; off by default, not colour-vision safe }
 export function createContactsLayer(g, data, opts = {}) {
-  const o = { fill: true, lines: true, wells: true, barrier: true, outline: true, fade: true, colour: "continuous", columnStep: null, ...opts };
+  const o = { fill: true, lines: true, wells: true, barrier: true, outline: true, fade: true, colour: "continuous", columnStep: null, standard: false, ...opts };
   const kase = data.cases.find((c) => c.id === o.caseId) ?? data.cases[0];
   const setup = {
     outline: data.outline?.xy ?? null,
@@ -40,7 +41,9 @@ export function createContactsLayer(g, data, opts = {}) {
   function colours() {
     const out = {};
     for (const f of fluids) {
-      const stops = hueRamp(FLUID_HUE[f]);
+      // the Geostandard gives one colour per fluid: the ramp runs from the page surface to that colour, so a thin column is pale and a thick one full
+      const std = symbolData.colours[f], surf = d3.rgb(token("--ss-surface"));
+      const stops = o.standard ? d3.range(7).map((i) => d3.interpolateRgb(surf, std)(0.15 + (0.85 * i) / 6)) : hueRamp(FLUID_HUE[f]);
       const n = Math.max(2, Math.ceil(colMax / step));
       out[f] = { stops, lut: lut(stops), classes: classColours(stops, n).map((c) => { const k = d3.rgb(c); return [k.r, k.g, k.b]; }), classCss: classColours(stops, n), n };
     }
@@ -133,11 +136,14 @@ export function createContactsLayer(g, data, opts = {}) {
           linesFor(setup.segments[k]).forEach((L, li) => {
             ctx.save(); toGrid(); ctx.beginPath(); path(region); ctx.clip(); toFine();
             ctx.strokeStyle = ink; ctx.lineJoin = ctx.lineCap = "round";
-            ctx.lineWidth = ((L.main ? 2.2 : 1.1) * dpr * U) / pc;
-            ctx.setLineDash(L.kind === "GOC" ? [8 * dpr * U / pc, 3 * dpr * U / pc, 2 * dpr * U / pc, 3 * dpr * U / pc] : L.main ? [] : [5 * dpr * U / pc, 4 * dpr * U / pc]);
+            const f = (u) => (u * dpr * U) / pc, std = o.standard && L.main && (L.kind === "OWC" || L.kind === "GWC"); // Geostandard 6.27: black 1.5 pt with a coloured 1 pt dash
+            ctx.lineWidth = f(std ? 1.5 : L.main ? 2.2 : 1.1);
+            ctx.setLineDash(L.kind === "GOC" ? [f(8), f(3), f(2), f(3)] : L.main ? [] : [f(5), f(4)]);
             ctx.globalAlpha = L.main ? 1 : 0.8;
             const cs = d3.contours().size([fine.nx, fine.ny]).thresholds([L.depth])(cg)[0];
-            ctx.beginPath(); path(cs); ctx.stroke(); ctx.restore();
+            ctx.beginPath(); path(cs); ctx.stroke();
+            if (std) { ctx.strokeStyle = symbolData.colours[L.kind === "OWC" ? "red" : "oil"]; ctx.lineWidth = f(1); ctx.setLineDash([f(4), f(4)]); ctx.beginPath(); path(cs); ctx.stroke(); }
+            ctx.restore();
             // main lines are labelled at their east-most point inside the segment's fill, the low and high cases (short text) at the north-most
             let best = null;
             for (const poly of cs.coordinates) for (const ring of poly) for (const [fx, fy] of ring) {
@@ -176,9 +182,9 @@ export function createContactsLayer(g, data, opts = {}) {
       const halo = (text, x, y, align = "left") => { ctx.font = font; ctx.textAlign = align; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; ctx.lineWidth = 3.5 * dpr; ctx.strokeStyle = surface; ctx.strokeText(text, x, y); ctx.fillStyle = ink; ctx.fillText(text, x, y); };
       if (o.wells) {
         for (const e of data.evidence ?? []) {
-          const [x, y] = view.project(...e.xy), spec = wellSpec(e.fluid === "oil" ? { fluids: [["oil", "proven"]] } : { fluids: "dry" });
+          const [x, y] = view.project(...e.xy), well = e.fluid === "oil" ? { fluids: [["oil", "proven"]] } : { fluids: "dry" }, spec = wellSpec(well);
           ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = surface; ctx.beginPath(); ctx.arc(x, y, 11 * dpr, 0, 2 * Math.PI); ctx.fill(); ctx.restore();
-          drawSymbol(ctx, spec, x, y, 34 * dpr, { ink, mutedInk: token("--ss-text-muted") });
+          drawSymbol(ctx, spec, x, y, 34 * dpr, { ink: o.standard ? (fluidInk(well) ?? ink) : ink, mutedInk: token("--ss-text-muted") });
           halo(shortWell(e.well), x + 14 * dpr, y);
         }
       }
@@ -203,12 +209,13 @@ export function createContactsLayer(g, data, opts = {}) {
       }
       if (o.fill && o.fade && used.some((s) => s.model.deepest.distribution || s.model.deepest.range)) out.push({ kind: "fade", label: used.some((s) => s.model.deepest.distribution) ? "Opacity: probability that the contact is at least this deep (PUD Table 3.5)" : "Opacity: probability that the contact is at least this deep (triangular on min, likely, max)" });
       if (o.lines) {
-        out.push({ kind: "line", label: "Contact, base or likely case", width: 2.2 });
+        out.push(o.standard ? { kind: "line", label: "Contact, base or likely case (Geostandard: black, with a red dash for oil-water, green for gas-water)", width: 1.6, over: { colour: symbolData.colours.red, dash: "3 3", width: 1 } } : { kind: "line", label: "Contact, base or likely case", width: 2.2 });
         if (setup.segments.some((s) => s.contacts.some((c) => c.distribution || c.range))) out.push({ kind: "line", label: "Contact, low and high cases", width: 1.1, dash: "5 4", alpha: 0.8 });
         if (setup.segments.some((s) => s.contacts.some((c) => c.kind === "GOC"))) out.push({ kind: "line", label: "Gas-oil contact", width: 2, dash: "8 3 2 3" });
       }
       if (o.barrier && (data.barriers ?? []).length) out.push({ kind: "hatch", label: "Segment barrier: fills and contacts do not merge across it" });
       if (o.outline && data.outline) out.push({ kind: "line", label: "Accumulation limit (the PUD model outline)", width: 1.1, dash: "2 4", alpha: 0.7 });
+      if (o.standard) out.push({ kind: "note", label: "Geostandard colours (6.12, 6.27), as the standard has them: oil green against gas red is not colour-vision safe." });
       if (o.wells && (data.evidence ?? []).length) {
         out.push({ kind: "symbol", svg: symbolSvg(wellSpec({ fluids: [["oil", "proven"]] }), { size: 26 }), label: "Well with oil" });
         if (data.evidence.some((e) => e.fluid === "water")) out.push({ kind: "symbol", svg: symbolSvg(wellSpec({ fluids: "dry" }), { size: 26 }), label: "Well with water in the reservoir" });
@@ -230,6 +237,7 @@ export function createContactsLayer(g, data, opts = {}) {
       }
       if ((data.evidence ?? []).length) rows.push({ label: "Wells", value: data.evidence.map((e) => `${shortWell(e.well)}: ${e.fluid} ${e.fluid === "oil" ? `${f(e.top)} to ${f(e.base)}` : `from ${f(e.top)}`} m`).join("; ") });
       for (const p of data.checks ?? []) if (p.case === kase.id) rows.push({ label: "Check", value: p.problem });
+      if (o.standard) rows.push({ label: "Colours", value: "Geostandard 6.12 (oil green, gas red) and 6.27 (contact lines black with a coloured dash). Not colour-vision safe: oil against gas is a red-green pair. SubScout colours are the default." });
       if (data.georeference) rows.push({ label: "Digitised", value: `Barrier and outline traced from ${data.georeference.figure.split(", the")[0]}, placed by two wells: approximate to about ${data.georeference.accuracy_m} m.` });
       return rows;
     },

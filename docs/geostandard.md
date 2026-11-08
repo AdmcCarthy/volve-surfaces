@@ -167,7 +167,7 @@ unknown `6083a8`, CO2 `cdbd66`. Shows: proven oil `009900`, oil shows `00ff00`, 
 3. **Title-box fields** (section 3).
 4. **H and L** marks, isochron hachures.
 5. Standard map-type names in the heading.
-6. Optional `geostandard` ramp and hydrocarbon colour set.
+6. Optional `geostandard` hydrocarbon colour set: **done for contacts** (oil green, gas red, the 6.27 contact-line style; off by default). The structure-map rainbow (6.18) is still not offered.
 
 ## 9. Open questions
 

@@ -60,3 +60,4 @@ footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
 .vs-entry-bar { align-items: flex-start; }
 .vs-entry-bar > div { width: 14rem; flex: none; }
 .vs-entry-bar .vs-bar { height: 10px; }
+.vs-note-entry { font-size: 0.74rem; color: var(--ss-text-muted); font-style: italic; max-width: 40rem; }

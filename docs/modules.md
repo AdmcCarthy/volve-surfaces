@@ -7,7 +7,8 @@ without the others. Written 2026-11-08, after reviewing the Sodir Geostandard ([
 
 1. **Well symbols live in SubScout.** SubScout is the style authority, every mapping repo already vendors from it, and this repo already copies its tokens.
 2. **One canonical coordinate system: ETRS89 / UTM zone 31N (EPSG:25831).** Everything is converted at the edge, by adapters. No layer ever receives ED50.
-3. **The Sodir Geostandard (v22.00) is the authority for map-type names, title-box metadata, symbols and standard colours.** SubScout's style guide decides what the standard is silent on;
+3. **Ownership: this repo is the home of contour-based subsurface interpretation display** (surfaces, faults and barriers, contact lines and fills, and their line styles). SubScout owns tokens, the style guide and point symbols (wells, installations). (2026-11-08)
+4. **The Sodir Geostandard (v22.00) is the authority for map-type names, title-box metadata, symbols and standard colours.** SubScout's style guide decides what the standard is silent on;
    conflicts are listed in [geostandard.md](geostandard.md) section 7. Fjord stays the default ramp; the standard's own scales are selectable alternatives.
 
 ## The modules

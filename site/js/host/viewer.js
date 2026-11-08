@@ -12,7 +12,7 @@ initRoot();
 const $ = (id) => document.getElementById(id);
 // Detail: how the surface is prepared for display. Smoothing is edge-preserving (fault steps are kept) and stated on the map.
 const DETAIL = { raw: { sigmaM: 0, upsample: 1 }, light: { sigmaM: 0, upsample: 2 }, fine: { sigmaM: 25, upsample: 2 }, medium: { sigmaM: 50, upsample: 2 } };
-const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off", contacts: "off", ccase: "", ccolour: "continuous", cfade: "on" };
+const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off", contacts: "off", ccase: "", ccolour: "continuous", cfade: "on", cpalette: "subscout" };
 const NUM = new Set(["contour", "shade", "min", "max"]);
 const state = { ...defaults };
 for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
@@ -54,11 +54,11 @@ async function draw() {
   const cd = state.contacts === "on" ? await getContacts(state.set).catch(() => null) : null;
   if (mine !== drawId) return;
   const cOk = cd && g.domain === "depth" && horizonKey(state.h) === cd.horizon && state.h.startsWith(cd.horizon);
-  $("f-ccase").hidden = $("f-ccolour").hidden = $("f-cfade").hidden = state.contacts !== "on" || !cd;
+  $("f-ccase").hidden = $("f-ccolour").hidden = $("f-cfade").hidden = $("f-cpalette").hidden = state.contacts !== "on" || !cd;
   $("f-contacts-note").textContent = state.contacts !== "on" ? "" : !cd ? "No contacts for this data set." : cOk ? "" : "Contacts are drawn on the top Hugin depth map: choose Hugin Fm top, depth.";
   if (cd && !$("c-ccase").options.length) $("c-ccase").replaceChildren(...cd.cases.map((c) => new Option(c.label, c.id)));
   if (cd) { if (!cd.cases.some((c) => c.id === state.ccase)) state.ccase = cd.cases[0].id; $("c-ccase").value = state.ccase; }
-  if (cOk) ls.push(createContactsLayer(g, cd, { caseId: state.ccase, prepared: surface.prepared(), colour: state.ccolour, fade: state.cfade === "on" }));
+  if (cOk) ls.push(createContactsLayer(g, cd, { caseId: state.ccase, prepared: surface.prepared(), colour: state.ccolour, fade: state.cfade === "on", standard: state.cpalette === "geostandard" }));
   const fd = state.faults === "off" ? null : await getFaults(state.set).catch(() => null);
   if (mine !== drawId) return;
   const fl = fd && createFaultLayer(fd, { polygons: ["polygons", "both"].includes(state.faults), sticks: ["sticks", "both"].includes(state.faults), horizon: horizonKey(state.h) });
@@ -95,6 +95,7 @@ bind("c-faults", "faults", [["off", "Off"], ["polygons", "Polygons"], ["sticks",
 bind("c-contacts", "contacts", [["off", "Off"], ["on", "On"]]);
 bind("c-ccolour", "ccolour", [["continuous", "Continuous"], ["stepped", "Stepped"]]);
 bind("c-cfade", "cfade", [["on", "Fade"], ["off", "None"]]);
+bind("c-cpalette", "cpalette", [["subscout", "SubScout"], ["geostandard", "Geostandard"]]);
 $("c-ccase").addEventListener("change", (e) => { state.ccase = e.target.value; draw(); });
 const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); draw(); });
 

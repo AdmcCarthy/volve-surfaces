@@ -84,8 +84,9 @@ export function renderEntries(el, entries) {
     const sample = e.kind === "symbol" ? e.svg
       : e.kind === "hatch" ? `<svg width="34" height="14" aria-hidden="true"><line x1="2" y1="7" x2="32" y2="7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>${[6, 12, 18, 24, 30].map((x) => `<line x1="${x}" y1="2" x2="${x}" y2="12" stroke="currentColor" stroke-width="1"/>`).join("")}</svg>`
       : e.kind === "fade" ? `<svg width="34" height="12" aria-hidden="true"><defs><linearGradient id="vs-fade"><stop offset="0" stop-color="currentColor" stop-opacity="1"/><stop offset="1" stop-color="currentColor" stop-opacity="0.05"/></linearGradient></defs><rect x="2" y="2" width="30" height="8" fill="url(#vs-fade)"/></svg>`
-      : `<svg width="34" height="12" aria-hidden="true"><line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="${e.width ?? 1.4}" stroke-opacity="${e.alpha ?? 1}" stroke-linecap="round"${e.dash ? ` stroke-dasharray="${e.dash}"` : ""}/></svg>`;
-    row.innerHTML = `${sample}<span>${escape(e.label)}</span>`;
+      : e.kind === "note" ? ""
+      : `<svg width="34" height="12" aria-hidden="true"><line x1="2" y1="6" x2="32" y2="6" stroke="currentColor" stroke-width="${e.width ?? 1.4}" stroke-opacity="${e.alpha ?? 1}" stroke-linecap="round"${e.dash ? ` stroke-dasharray="${e.dash}"` : ""}/>${e.over ? `<line x1="2" y1="6" x2="32" y2="6" stroke="${e.over.colour}" stroke-width="${e.over.width}" stroke-dasharray="${e.over.dash}"/>` : ""}</svg>`;
+    row.innerHTML = e.kind === "note" ? `<span class="vs-note-entry">${escape(e.label)}</span>` : `${sample}<span>${escape(e.label)}</span>`;
     return row;
   }));
 }

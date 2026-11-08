@@ -48,7 +48,7 @@ Required fields (1.2.2) and what we have today. Labels must be written exactly a
 | Area | yes | no | structural element from the NPD list: `Utsira High` (Utsirahøgda, 7.4.8) |
 | Field/prospect | yes | no | `Volve` (NPD approved field names) |
 | Quadrant/block | yes | no | `15/9` (arabic numerals, oblique, no leading zeros) |
-| Licence | yes | no | `PL046` style; verify against Sodir |
+| Licence | yes | no | `PL 046` (on the cover of the 1993 discovery evaluation report); confirm the current form against Sodir |
 | Type of document | yes | no | see section 2 |
 | Horizon | yes | label only | `Top Hugin Formation` style; informal names avoided |
 | Map coverage | yes | no | UTM `6475411 N-6482362 N`, `430674 E-440082 E`, no leading zeros |

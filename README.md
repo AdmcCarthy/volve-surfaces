@@ -2,7 +2,7 @@
 
 **Shaded contour maps of the Volve geophysical interpretations, generalised for fast, readable display in the browser (D3).**
 
-Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). Standards review: [docs/geostandard.md](docs/geostandard.md). Inventory: [docs/inventory.md](docs/inventory.md).
+Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). Hydrocarbon contacts (design): [docs/contacts.md](docs/contacts.md). Standards review: [docs/geostandard.md](docs/geostandard.md). Inventory: [docs/inventory.md](docs/inventory.md).
 
 ```
 uv sync --all-groups

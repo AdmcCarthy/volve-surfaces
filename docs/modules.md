@@ -129,6 +129,7 @@ As built the runtime is `wellSpec(well)` (compose layers from a record), `symbol
 4. **Wells**: the Volve adapter (well picks, perforations; names parsed per 3.2), the Sodir adapter for status and fluid, the well layer using SubScout symbols; wells over a surface, with the datum check.
 5. **Title box, scale bar and location map** as host components, fields exactly per the Geostandard.
 6. **Optional `geostandard` ramp and hydrocarbon colour set**; H and L marks; hachured depressions on isochores.
+7. **Hydrocarbon contacts** ([contacts.md](contacts.md)): the fluid fill of a structure by contact, per fault segment, with the column map and the uncertainty range. A contacts record, `surface/fill.js` (compute), `layers/contacts.js`, a Volve adapter from the cited reports (OWC 3120 m MSL in the 2005 plan; 2882, 2945 and 2950 in the 1993 evaluation). Decisions for you are at the end of that note.
 
 ## Open decisions
 

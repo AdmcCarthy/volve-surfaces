@@ -1,4 +1,4 @@
-// Review page: one horizon under many treatments, painted lazily, repainted when the scheme, data set or emphasis changes.
+// Review page: one horizon under many treatments, painted lazily, repainted when the scheme or data set changes.
 import { loadSet, loadGrid, blur, derived, extent, autoStep } from "./grid.js";
 import { RAMPS, stopsOf } from "./ramps.js";
 import { renderMap } from "./render.js";
@@ -6,7 +6,7 @@ import { ATTRIBUTION, initRoot, setScheme, seg, renderLegend, factsHTML } from "
 
 initRoot();
 const $ = (id) => document.getElementById(id);
-const state = { set: "real", emph: "deep" };
+const state = { set: "real" };
 const sets = {};
 const getSet = (n) => (sets[n] ??= loadSet(`data/${n}`));
 const TOP = "hugin_top_depth", BASE = "hugin_base_depth";
@@ -23,14 +23,14 @@ const SECTIONS = [
       { title: "Shale · stepped", ramp: "shale", opts: {}, note: "Frost preset. Not chosen.", tags: ["stepped", "shale"] },
     ].map((c) => ({ ...c, h: TOP })) },
   { id: "detail", title: "Detail: how much to smooth",
-    lead: "Seismic horizons are smoothed with edge-preserving filters, because a plain blur rounds off fault steps. Fine and Medium use anisotropic diffusion (Perona-Malik) so noise and gentle roughness go and fault throws stay; every level above Raw also draws contours on a bicubic grid twice as dense, which removes the 25 m stair-steps without changing a value. Each caption gives the mean and largest change from the source. 20 m contours are on so the effect shows.",
+    lead: "Seismic horizons are smoothed with edge-preserving filters, because a plain blur rounds off fault steps. Fine and Medium use anisotropic diffusion (Perona-Malik) so noise and gentle roughness go and fault throws stay; every level above Raw also draws contours on a bicubic grid twice as dense, which removes the 25 m stair-steps without changing a value. Each caption gives the mean and largest change from the source. 10 m contours are on so the effect shows.",
     cards: [
       ["Raw", { sigmaM: 0, upsample: 1 }, "Source picks resampled to a 25 m grid. Contours show the grid stair-steps."],
       ["Light", { sigmaM: 0, upsample: 2 }, "Values unchanged. Contours drawn on a denser grid, so lines are smooth and every node is honoured."],
       ["Fine (default)", FINE, "About 25 m (one cell) of edge-preserving smoothing: noise goes, faults and closures stay."],
       ["Medium", { sigmaM: 50, upsample: 2 }, "About 50 m. Small closures begin to soften; the largest usable setting."],
       ["Fine, Gaussian (for comparison)", { ...FINE, smoother: "gaussian" }, "Same width with a plain blur: compare the fault edges."],
-    ].map(([t, o, note]) => ({ title: t, h: TOP, ramp: "fjord", opts: { ...o, contour: 20 }, note, tags: ["stepped", "20 m lines"] })) },
+    ].map(([t, o, note]) => ({ title: t, h: TOP, ramp: "fjord", opts: o, note, tags: ["stepped", "10 m lines"] })) },
   { id: "steps", title: "Class step and colour range",
     lead: "The class step is set by you, not by a class count: usually 20 to 50 m, sometimes 10 m, depending on the surface and the area of interest. The colour range defaults to the data range rounded to the step, and can be set by hand. Values outside it take the end colours.",
     cards: [
@@ -41,15 +41,15 @@ const SECTIONS = [
       ["20 m steps, range 2,900 to 3,300 m", { step: 20, min: 2900, max: 3300 }, "Colours spent on the reservoir interval; deeper and shallower ground takes the end colours."],
     ].map(([t, o, note]) => ({ title: t, h: TOP, ramp: "fjord", opts: o, note, tags: ["stepped", o.min ? "custom range" : "full range"] })) },
   { id: "lines", title: "Contour lines",
-    lead: "Intervals of 10, 20 or 50 m; every fifth line is drawn heavier. Lines are optional and sit over either fill.",
-    cards: [["No lines", 0], ["10 m", 10], ["20 m", 20], ["50 m", 50]].map(([t, c]) => ({ title: t, h: TOP, ramp: "fjord", opts: { contour: c, step: 50 }, note: c ? `Index lines every ${c * 5} m.` : "Class edges carry the contours.", tags: [c ? `${c} m` : "none"] })) },
+    lead: "Intervals of 10, 20 or 50 m; every fifth line is drawn heavier. Lines are optional and sit over either fill. Ten metres over the stepped fill is the recommended default: the classes give the broad shape at a glance and the lines give the detail and exact values.",
+    cards: [["No lines", 0], ["10 m", 10], ["20 m", 20], ["50 m", 50]].map(([t, c]) => ({ title: t, h: TOP, ramp: "fjord", opts: { contour: c, step: 50 }, note: c === 10 ? "Recommended. Index lines every 50 m." : c ? `Index lines every ${c * 5} m.` : "Class edges carry the contours.", tags: c === 10 ? ["10 m", "default"] : [c ? `${c} m` : "none"] })) },
   { id: "shade", title: "Shading across the faults",
-    lead: "The steepest half of one per cent of the surface is fault scarps. Its orientation is measured from the data (doubled-angle mean of the gradient direction) and the light is placed across that trend, from the side the scarps face away from, so steep faces fall in shadow. Each caption gives the trend it found.",
+    lead: "The steepest half of one per cent of the surface is fault scarps. Their orientation is measured from the data and the light is placed across the trend, from the side the scarps face away from, so steep faces fall in shadow. Where a second trend about a quadrant away carries enough of the steepness (NE-SW against SE-NW), it gets its own light. Each caption gives what it found.",
     cards: [
-      { title: "Soft, light across faults", opts: { shade: 0.5 }, note: "Automatic light direction.", tags: ["stepped", "auto light"] },
-      { title: "Strong, light across faults", opts: { shade: 1 }, note: "Maximum relief.", tags: ["stepped", "auto light"] },
-      { title: "Soft, fixed north-west light", opts: { shade: 0.5, light: "nw" }, note: "The usual 315 degrees, for comparison.", tags: ["stepped", "315°"] },
-      { title: "Linear with soft shading", opts: { fill: "linear", shade: 0.5 }, note: "Gradient plus relief.", tags: ["linear", "auto light"] },
+      { title: "Soft, light across faults", opts: { contour: 0, shade: 0.5 }, note: "Automatic light direction.", tags: ["stepped", "auto light"] },
+      { title: "Strong, light across faults", opts: { contour: 0, shade: 1 }, note: "Maximum relief.", tags: ["stepped", "auto light"] },
+      { title: "Soft, fixed north-west light", opts: { contour: 0, shade: 0.5, light: "nw" }, note: "The usual 315 degrees, for comparison.", tags: ["stepped", "315°"] },
+      { title: "Linear with soft shading", opts: { contour: 0, fill: "linear", shade: 0.5 }, note: "Gradient plus relief.", tags: ["linear", "auto light"] },
       { title: "20 m steps, 10 m lines, soft shading", opts: { step: 20, contour: 10, shade: 0.5 }, note: "Everything on: the busiest combination.", tags: ["stepped", "lines", "shaded"] },
     ].map((c) => ({ ...c, h: TOP, ramp: "fjord" })) },
   { id: "horizons", title: "Other horizons",
@@ -77,7 +77,7 @@ function swatches(key) {
 }
 function paintSwatches() {
   document.querySelectorAll("[data-ramp]").forEach((el) => {
-    const bar = el.querySelector(".vs-bar"), stops = stopsOf(el.dataset.ramp, state.emph === "shallow" && RAMPS[el.dataset.ramp].kind === "seq");
+    const bar = el.querySelector(".vs-bar"), stops = stopsOf(el.dataset.ramp);
     bar.style.gridTemplateColumns = `repeat(${stops.length}, 1fr)`;
     bar.replaceChildren(...stops.map((c) => { const i = document.createElement("i"); i.style.background = c; i.style.height = "28px"; return i; }));
   });
@@ -120,8 +120,8 @@ async function paint(c) {
   try {
     const g = await gridFor(c.h), seq = RAMPS[c.ramp].kind === "seq";
     const [lo, hi] = extent(g.z);
-    const info = renderMap(canvas, g, { fill: "stepped", step: autoStep(lo, hi), classes: 9, ...FINE, contour: 0, shade: 0,
-      ...c.opts, stops: stopsOf(c.ramp, seq && state.emph === "shallow") });
+    const info = renderMap(canvas, g, { fill: "stepped", step: autoStep(lo, hi), classes: 9, ...FINE, contour: 10, shade: 0,
+      ...c.opts, stops: stopsOf(c.ramp) });
     renderLegend(c.el.querySelector(".lg"), info);
     c.el.querySelector(".fx").innerHTML = factsHTML(info, g, { short: true });
     $("attr").textContent = g.manifest.synthetic ? g.manifest.attribution : ATTRIBUTION;
@@ -141,6 +141,5 @@ function invalidate() { paintSwatches(); cards.forEach((c) => { c.stale = true; 
 // ---------------------------------------------------------------- controls
 seg($("c-set"), [["real", "Volve"], ["synthetic", "Synthetic"]], state.set, (v) => { state.set = v; invalidate(); });
 seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); invalidate(); });
-seg($("c-emph"), [["deep", "Deepest"], ["shallow", "Shallowest"]], state.emph, (v) => { state.emph = v; invalidate(); });
 $("attr").textContent = ATTRIBUTION;
 paintSwatches();

@@ -23,11 +23,12 @@ function bilinear(z, nx, ny, i, j, fx, fy) {
 }
 
 // Soft hillshade as a nx x ny RGBA image: dark where the surface faces away from the light, light where it faces it,
-// transparent on flat ground. Elevation is -depth, exaggerated by `ve`. Light comes from `az` (degrees clockwise from
-// north) plus two neighbours 35 degrees either side, for a soft multi-directional result.
-function hillshade(z, nx, ny, cell, ve, strength, az) {
+// transparent on flat ground. Elevation is -depth, exaggerated by `ve`. `sources` is a list of [azimuth, weight]
+// (degrees clockwise from north, weights summing to 1); each source also gets two neighbours 35 degrees either side,
+// for a soft multi-directional result.
+function hillshade(z, nx, ny, cell, ve, strength, sources) {
   const img = new ImageData(nx, ny);
-  const lights = [[az, 0.5], [az - 35, 0.25], [az + 35, 0.25]].map(([a, w]) => {
+  const lights = sources.flatMap(([az, w]) => [[az, 0.5 * w], [az - 35, 0.25 * w], [az + 35, 0.25 * w]]).map(([a, w]) => {
     const r = (a * Math.PI) / 180;
     return [Math.sin(r) * Math.cos(ALT), Math.cos(r) * Math.cos(ALT), w];
   });
@@ -140,12 +141,12 @@ export function renderMap(canvas, g, opts = {}) {
 
   // fault trend: orientation of the steepest gradients; light comes across it so steep faces fall in shadow
   const trend = faultTrend(g.z, nx, ny, cell);
-  const lightAz = o.light === "nw" || !trend.auto ? 315 : trend.light;
+  const lights = o.light === "nw" || !trend.auto ? [[315, 1]] : trend.trends.map((t) => [t.light, t.share]);
   if (o.shade > 0) {
     const sg = dilate(blur(smooth, nx, ny, 1), nx, ny, 3);
     const off = document.createElement("canvas");
     off.width = nx; off.height = ny;
-    off.getContext("2d").putImageData(hillshade(sg, nx, ny, cell, o.ve, o.shade, lightAz), 0, 0);
+    off.getContext("2d").putImageData(hillshade(sg, nx, ny, cell, o.ve, o.shade, lights), 0, 0);
     ctx.save(); toGrid(); ctx.beginPath(); path(foot); ctx.clip();
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high"; ctx.drawImage(off, 0, 0);
     ctx.restore();
@@ -168,7 +169,7 @@ export function renderMap(canvas, g, opts = {}) {
   ctx.restore();
 
   return { fill: o.fill, stops: o.stops, edges, colours: cols, domain, range, unit: g.unit, method: o.diverging ? "sym" : o.method, step: o.step && !o.diverging ? o.step : null,
-    sigmaM: o.sigmaM, smoother: o.smoother, upsample: U, dev, contour: o.contour || null, shade: o.shade, trend, lightAz, lightMode: o.light, view: { x0, y0, k } };
+    sigmaM: o.sigmaM, smoother: o.smoother, upsample: U, dev, contour: o.contour || null, shade: o.shade, trend, lights, lightMode: o.light, view: { x0, y0, k } };
 }
 
 // Raw (unsmoothed) value and UTM position under a pointer, in CSS px relative to the canvas.

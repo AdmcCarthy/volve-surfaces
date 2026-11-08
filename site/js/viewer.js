@@ -8,7 +8,7 @@ initRoot();
 const $ = (id) => document.getElementById(id);
 // Detail: how the surface is prepared for display. Smoothing is edge-preserving (fault steps are kept) and stated on the map.
 const DETAIL = { raw: { sigmaM: 0, upsample: 1 }, light: { sigmaM: 0, upsample: 2 }, fine: { sigmaM: 25, upsample: 2 }, medium: { sigmaM: 50, upsample: 2 } };
-const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", emph: "deep", step: "auto", min: null, max: null, detail: "fine", contour: 0, shade: 0, light: "auto" };
+const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto" };
 const NUM = new Set(["contour", "shade", "min", "max"]);
 const state = { ...defaults };
 for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
@@ -34,7 +34,7 @@ async function draw() {
     return;
   }
   const [lo, hi] = extent(g.z), step = state.step === "auto" ? autoStep(lo, hi) : state.step;
-  info = renderMap($("map"), g, { fill: state.fill, stops: stopsOf(state.ramp, state.emph === "shallow"), step, min: state.min, max: state.max,
+  info = renderMap($("map"), g, { fill: state.fill, stops: stopsOf(state.ramp), step, min: state.min, max: state.max,
     ...DETAIL[state.detail], contour: state.contour, shade: state.shade, light: state.light });
   renderLegend($("legend"), info);
   $("facts").innerHTML = factsHTML(info, g);
@@ -53,7 +53,6 @@ const bind = (id, key, options, num = false) => seg($(id), options, state[key], 
 bind("c-set", "set", [["real", "Volve"], ["synthetic", "Synthetic"]]);
 bind("c-fill", "fill", [["linear", "Linear"], ["stepped", "Stepped"]]);
 bind("c-ramp", "ramp", Object.entries(RAMPS).filter(([, r]) => r.kind === "seq").map(([k, r]) => [k, r.label]));
-bind("c-emph", "emph", [["deep", "Deepest"], ["shallow", "Shallowest"]]);
 bind("c-step", "step", [["auto", "Auto"], [10, "10"], [20, "20"], [50, "50"], [100, "100"]], true);
 bind("c-detail", "detail", [["raw", "Raw"], ["light", "Light"], ["fine", "Fine"], ["medium", "Medium"]]);
 bind("c-contour", "contour", [[0, "None"], [10, "10"], [20, "20"], [50, "50"]], true);

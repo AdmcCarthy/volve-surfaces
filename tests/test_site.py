@@ -41,3 +41,11 @@ def test_stage_assembles_site_and_both_data_sets(tmp_path):
     assert (out / "index.html").exists() and (out / "viewer.html").exists()
     assert (out / "data" / "real" / "manifest.json").exists()
     assert (out / "data" / "synthetic" / "manifest.json").exists()
+
+
+def test_strongest_colour_is_not_an_option_and_ten_metre_lines_are_default():
+    for f in OWN:
+        assert "emph" not in f.read_text(encoding="utf-8").lower().replace(
+            "emphasis", ""
+        ), f.name
+    assert "contour: 10" in (SITE / "js" / "viewer.js").read_text(encoding="utf-8")

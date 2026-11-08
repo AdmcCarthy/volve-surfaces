@@ -87,10 +87,10 @@ export function smoothing(info) {
 
 export function shading(info) {
   if (!info.shade) return "";
-  const t = info.trend, az = Math.round(info.lightAz);
-  if (info.lightMode === "nw" || !t.auto) return `Light from ${az}° (north-west, fixed)`;
-  const strike = `N${Math.round(t.strike)}°E`;
-  return `Light from ${az}°, across the steepest-gradient trend (strike ${strike}, coherence ${d3.format(".2f")(t.coherence)}), so steep faces fall in shadow`;
+  const t = info.trend, f = d3.format(".2f"), az = (a) => `${Math.round(a)}°`;
+  if (info.lightMode === "nw" || !t.auto) return `Light from ${az(info.lights[0][0])} (north-west, fixed${t.auto ? "" : "; no clear fault trend"})`;
+  const parts = t.trends.map((x) => `${az(x.light)} across the N${Math.round(x.strike)}°E trend (coherence ${f(x.coherence)}${t.trends.length > 1 ? `, ${Math.round(x.share * 100)}% of the steepness` : ""})`);
+  return `${t.trends.length > 1 ? "Two lights: " : "Light from "}${parts.join("; ")}. Steep faces fall in shadow`;
 }
 
 export function factsHTML(info, g, { short = false } = {}) {

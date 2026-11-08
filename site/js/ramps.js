@@ -11,11 +11,10 @@ export const RAMPS = {
 
 export const token = (name, el = document.documentElement) => getComputedStyle(el).getPropertyValue(name).trim();
 
-// Stops of a named ramp for the current scheme, low to high. `flip` reverses them.
-export function stopsOf(key, flip = false) {
+// Stops of a named ramp for the current scheme, low to high. The strongest colour is always the deepest.
+export function stopsOf(key) {
   const r = RAMPS[key], n = r.kind === "seq" ? 7 : 9;
-  const stops = Array.from({ length: n }, (_, i) => token(`--ss-data-${r.kind}-${r.name}-${i + 1}`));
-  return flip ? stops.reverse() : stops;
+  return Array.from({ length: n }, (_, i) => token(`--ss-data-${r.kind}-${r.name}-${i + 1}`));
 }
 
 // Continuous ramp t in [0, 1] -> colour (piecewise through the stops in Lab, as a sequential ramp should blend).

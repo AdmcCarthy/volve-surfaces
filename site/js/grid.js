@@ -87,6 +87,82 @@ export function dilate(z, nx, ny, passes = 3) {
   return a;
 }
 
+// Edge-preserving smoothing (Perona-Malik anisotropic diffusion, as used for seismic surfaces and structure-oriented
+// filtering): noise and gentle roughness are diffused away, steps such as fault throws are not, and nothing flows
+// across nodata (fault gaps, survey edge). `sigmaCells` is the equivalent Gaussian width where the surface is smooth.
+// The edge threshold K is the 85th percentile of neighbour differences, so only the steepest 15 % of steps are protected.
+export function edgePreserve(z, nx, ny, sigmaCells) {
+  if (!(sigmaCells > 0)) return z;
+  const diffs = [];
+  for (let y = 0; y < ny; y++) {
+    for (let x = 0; x < nx; x++) {
+      const v = z[y * nx + x];
+      if (Number.isNaN(v)) continue;
+      if (x < nx - 1 && !Number.isNaN(z[y * nx + x + 1])) diffs.push(Math.abs(z[y * nx + x + 1] - v));
+      if (y < ny - 1 && !Number.isNaN(z[(y + 1) * nx + x])) diffs.push(Math.abs(z[(y + 1) * nx + x] - v));
+    }
+  }
+  diffs.sort((a, b) => a - b);
+  const K = Math.max(1e-3, diffs[Math.floor(0.85 * (diffs.length - 1))] || 1e-3);
+  const dt = 0.2, iters = Math.max(1, Math.round((sigmaCells * sigmaCells) / 2 / dt));
+  let a = Float32Array.from(z);
+  for (let it = 0; it < iters; it++) {
+    const b = Float32Array.from(a);
+    for (let y = 0; y < ny; y++) {
+      for (let x = 0; x < nx; x++) {
+        const i = y * nx + x, v = a[i];
+        if (Number.isNaN(v)) continue;
+        let flux = 0;
+        for (const j of [x > 0 ? i - 1 : -1, x < nx - 1 ? i + 1 : -1, y > 0 ? i - nx : -1, y < ny - 1 ? i + nx : -1]) {
+          if (j < 0 || Number.isNaN(a[j])) continue;
+          const d = a[j] - v;
+          flux += Math.exp(-((d / K) ** 2)) * d;
+        }
+        b[i] = v + dt * flux;
+      }
+    }
+    a = b;
+  }
+  return a;
+}
+
+// Bicubic (Catmull-Rom) upsampling by an integer factor u: passes through every original value, so the data are not
+// changed, and contours drawn on the denser grid lose the 25 m stair-steps. Node I of the result sits at I / u.
+export function upsample(z, nx, ny, u) {
+  if (u <= 1) return { z, nx, ny, u: 1 };
+  const nx2 = (nx - 1) * u + 1, ny2 = (ny - 1) * u + 1;
+  const cr = (p0, p1, p2, p3, t) => 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t);
+  const c = (v, n) => Math.max(0, Math.min(n - 1, v));
+  const tmp = new Float32Array(nx2 * ny);
+  for (let y = 0; y < ny; y++) {
+    for (let X = 0; X < nx2; X++) {
+      const i = Math.floor(X / u), t = (X % u) / u, r = y * nx;
+      tmp[y * nx2 + X] = t === 0 ? z[r + i] : cr(z[r + c(i - 1, nx)], z[r + i], z[r + c(i + 1, nx)], z[r + c(i + 2, nx)], t);
+    }
+  }
+  const out = new Float32Array(nx2 * ny2);
+  for (let Y = 0; Y < ny2; Y++) {
+    const j = Math.floor(Y / u), t = (Y % u) / u;
+    for (let X = 0; X < nx2; X++) {
+      out[Y * nx2 + X] = t === 0 ? tmp[j * nx2 + X] : cr(tmp[c(j - 1, ny) * nx2 + X], tmp[j * nx2 + X], tmp[c(j + 1, ny) * nx2 + X], tmp[c(j + 2, ny) * nx2 + X], t);
+    }
+  }
+  return { z: out, nx: nx2, ny: ny2, u };
+}
+
+// Class edges at a fixed step between a rounded minimum and maximum: [min, min + step, ..., max]. At most `cap` classes.
+export function stepEdges(min, max, step, cap = 80) {
+  const n = Math.max(1, Math.min(cap, Math.round((max - min) / step)));
+  return d3.range(n + 1).map((i) => min + i * step);
+}
+
+// Largest of the usual steps that still gives about eight or more classes over the range.
+export const STEPS = [1, 2, 5, 10, 20, 50, 100, 200];
+export function autoStep(lo, hi) {
+  const ok = STEPS.filter((s) => (hi - lo) / s >= 8);
+  return ok.length ? ok[ok.length - 1] : STEPS[0];
+}
+
 export function extent(z) {
   let lo = Infinity, hi = -Infinity;
   for (let i = 0; i < z.length; i++) { const v = z[i]; if (v < lo) lo = v; if (v > hi) hi = v; }

@@ -47,3 +47,9 @@
 .vs-err { padding: 24px; color: var(--ss-text-muted); }
 footer.vs-foot { margin-block: var(--ss-space-xxl) var(--ss-space-xl); padding-top: var(--ss-space-m); border-top: 1px solid var(--ss-border-subtle); font-size: var(--ss-size-caption); color: var(--ss-text-muted); }
 footer.vs-foot p { max-width: 80ch; margin-bottom: 0.6em; }
+
+.vs-range { display: flex; gap: 6px; align-items: center; width: 100%; }
+.vs-range input { width: 5.6rem; font: 500 14px var(--ss-font-body); font-variant-numeric: tabular-nums; padding: 6px 8px; border-radius: var(--ss-radius-l); border: 1px solid var(--ss-border); background: var(--ss-surface); color: var(--ss-text); }
+.ss-seg-btn { font: 500 13px var(--ss-font-body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--ss-border-subtle); background: var(--ss-surface-raised); color: var(--ss-text-subtle); cursor: pointer; }
+.ss-seg-btn:hover { color: var(--ss-text); }
+.vs-hint { color: var(--ss-text-muted); font-size: var(--ss-size-caption); line-height: 1.4; }

@@ -66,7 +66,9 @@ def fault_offset(u, v, p0, p1, throw, width=40.0):
     length = np.hypot(*d)
     t = ((u - p0[0]) * d[0] + (v - p0[1]) * d[1]) / length**2
     dist = ((u - p0[0]) * -d[1] + (v - p0[1]) * d[0]) / length
-    taper = np.clip(np.sin(np.pi * np.clip(t, 0, 1)), 0, 1) ** 0.6 * ((t > 0) & (t < 1))
+    taper = (
+        np.sin(np.pi * np.clip(t, 0, 1)) ** 1.5
+    )  # gradient is zero at the tips: no cliff across the strike
     step = 0.5 * (1 + np.tanh(dist / width))
     return throw * taper * step, dist, taper
 

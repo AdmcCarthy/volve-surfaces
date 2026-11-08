@@ -65,3 +65,24 @@ def test_synthetic_manifest_matches_real_schema():
         assert shared <= h.keys()
     for h in syn["horizons"]:
         assert (OUT / "synthetic" / h["file"]).stat().st_size < 300_000
+
+
+def test_steepest_gradients_follow_the_main_fault_strike():
+    # the detector in site/js/trend.js looks at the steepest 0.5 % of cells; the generator's faults must be what it finds
+    z, survey, _ = synthetic.surfaces()
+    zz = np.where(survey, z["hugin_top"], np.nan)
+    gy, gx = np.gradient(zz, synthetic.CELL)
+    mag = np.hypot(gx, gy)
+    sel = mag >= np.nanpercentile(mag, 99.5)
+    phi = np.arctan2(gx[sel], -gy[sel])  # azimuth of steepest descent (rows run south)
+    axis = (
+        np.degrees(0.5 * np.angle(np.sum(mag[sel] ** 2 * np.exp(2j * phi)))) + 360
+    ) % 180
+    strike = (axis + 90) % 180
+    d = np.array(
+        [500 + 1800, 1500 + 1700.0]
+    )  # main fault direction in rotated (u, v) metres
+    c, s = np.cos(synthetic.ANGLE), np.sin(synthetic.ANGLE)
+    east, north = c * d[0] - s * d[1], s * d[0] + c * d[1]
+    true = np.degrees(np.arctan2(east, north)) % 180
+    assert min(abs(strike - true), 180 - abs(strike - true)) < 20

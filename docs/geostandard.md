@@ -103,6 +103,8 @@ structured parts rather than keeping a string, and the wells module only ever se
 
 ### 6.3 Symbols (3.4): shape first
 
+**The system is compositional.** A well is a base circle, a layer per fluid (oil, gas, condensate, each proven, minor or trace; condensate has no trace form), a technical-status layer and a function layer. The standard's combination tables are a selection and say so ("other combinations may be made by following the same principle"), so SubScout stores layers and composes them, and the 50 selected examples are tests. Implemented in SubScout PR [#1](https://github.com/AdmcCarthy/SubScout/pull/1).
+
 Shapes below are described from the rendered pages of the standard; check each against the PDF when drawing it.
 
 The standard's well symbols are **black and white and carry the meaning in the shape**; colour (6.12) is secondary. This is the right model for us.
@@ -115,7 +117,7 @@ Three independent axes, combined:
    (sun burst), minor gas (open burst), condensate (four-lobed), minor condensate, residual gas or trace, coal. Combinations for several fluids in separate zones: oil and gas, oil and
    condensate, gas and condensate, oil/gas and condensate, and others "by the same principle" (3.4.3). Status applies to the well as a whole unless the legend says it applies
    to the mapped zone.
-3. **Function** (3.4.4): producing (letters `F` flowing, `P` pumping, `OBS` observation), dual completion (oil, gas, oil and gas), production by fluid (oil, gas, gas/condensate,
+3. **Function** (3.4.4), drawn as an **overlay on the base symbol**: an arrow out to the north-east for production, an arrow in from the south-west for injection, a crossed circle for observation, a double ring for dual completion, a bar with a reason letter for shut-in, a pointer up or down for a zone above or below the mapped one. Cases: producing (letters `F` flowing, `P` pumping, `OBS` observation), dual completion (oil, gas, oil and gas), production by fluid (oil, gas, gas/condensate,
    water), relief well, shut-in with reason (`W` water, `R` repair, `G` gas-oil ratio, `S` sand, `E` exhausted), injection by fluid (water, gas, CO2, cuttings), converted well (producer
    to injector), zone specification (higher than, lower than, or exactly `R1`, `R2` for commingled). Planned production, water-injection and gas-injection wells have their own symbols.
    Users may define new letter codes if the legend defines them.
@@ -125,9 +127,9 @@ Further:
 - **Trajectory** (3.4.5): solid line (well trajectory), dotted (approximate), dashed (planned). Surface location (open circle), position of a marker (with depth label such as `-2100 m MSL`),
   top reservoir, reservoir interval (thick), bottom hole position (end tick). Sidetracks from a vertical well, wells from a platform, planned drilling radius from a platform to a horizon.
 - **Oriented dip readings** (3.4.6): from dipmeter, from core, at depth, in deviated wells.
-- **Active exploration wells** (3.4.7): wildcat and appraisal markers.
-- **Wells by general class** (3.4.9): development/service, exploratory, injector, non-hydrocarbon.
-- **Installations** (3.5): about 34 types, each with a *planned* variant: anchor, buoys (general, loading, midline, STL, weather), CDU, clamp, clump weight, concrete block, crossing point,
+- **Active exploration wells** (3.4.7): wildcat is a ring with a centre dot, appraisal a double ring.
+- **Wells by general class** (3.4.9): development/service, exploratory, injector, non-hydrocarbon, shown as **coloured dots only** (the one place the standard relies on colour alone; SubScout adds a shape to each).
+- **Installations** (3.5): 37 types plus a disused flare platform (38). The planned variant of each is **the same symbol in grey**, not a different shape, and a few carry fixed colours (platform red, anchor red, start/end point light blue, rig blue): anchor, buoys (general, loading, midline, STL, weather), CDU, clamp, clump weight, concrete block, crossing point,
   flange, flare platform (and disused), hang-off, junction, land valve station, manifold, pile, pipe connection, PLEM, PLET, platform, riser base, rig, ship, subsea template,
   subsea valve, tank, terminal or supply base, touchdown point, transponder, unknown.
 - **Scale**: the symbol size and the use of indices (codes) should be adjusted to the map scale, and the codes used must be defined in the legend.

@@ -101,7 +101,7 @@ legend, facts (the title box) and generic helpers; `viewer.js` and `review.js` a
 
 ### What SubScout gets
 
-New, and only after you agree:
+Opened as [SubScout PR #1](https://github.com/AdmcCarthy/SubScout/pull/1) (2026-11-08, v0.6.0), with your go-ahead. What it contains, as built:
 
 - `styleguide/wellbores.md`: the rules (shape first, colour optional, scale-dependent codes, legend always lists the codes in use, planned versus actual).
 - `src/subscout/tokens/symbols.toml`: the vocabulary (technical status, hydrocarbon status, function, class, installation type), a shape per symbol as a path in a unit box, default size at each scale
@@ -109,7 +109,7 @@ New, and only after you agree:
 - Tests: every vocabulary entry has a shape; legend and draw agree; symbols stay legible at the smallest size; light and dark both pass contrast.
 - Symbols are **shape-first**, so no meaning depends on colour. The standard's oil-green and gas-red then become an optional, off-by-default colour layer, with a visible note that it is not colour-vision safe.
 
-Wildcat, Tulip and the rest then call `classify()` and `draw()`; their own data adapters stay in their repos.
+As built the runtime is `wellSpec(well)` (compose layers from a record), `symbolSvg` and `drawSymbol` (SVG string or Canvas), `legend`, `describe` and `layersFor`, plus `installationSpec`, `classSpec` and `trajectoryDash`. There is no `classify()` in SubScout: translating a source's vocabulary (Sodir purpose, status, content) into the record is the job of the adapter that owns the source, so SubScout carries no source-specific code. Wildcat, Tulip and the rest call `wellSpec` and `drawSymbol`; their own data adapters stay in their repos. The review sheet is `site/symbols/`.
 
 ## Rules that keep the modules separate
 
@@ -125,14 +125,13 @@ Wildcat, Tulip and the rest then call `classify()` and `draw()`; their own data 
 0. **Done (2026-11-08): prerequisites.** Picks are converted to ETRS89 in the build (`scripts/crs.py`) and the grids rebuilt, manifests say EPSG:25831 and record the transformation. The horizon depth datum is verified against the well picks' TVDSS: mean sea level, positive down ([datum-check.md](datum-check.md)).
 1. **Refactor this repo** to the layout above with the contract, no change in what the pages show. Add the shared contract test.
 2. **Faults as a vector layer**, from the Volve sticks and polygons, Geostandard line styles, black via `--ss-text`. Only plain and uncertain lines until type is known.
-3. **SubScout symbols spec** (needs your go-ahead to change that repo): style guide page, `symbols.toml`, generator, tests.
+3. **SubScout symbols spec**: open as [SubScout PR #1](https://github.com/AdmcCarthy/SubScout/pull/1): style guide page, `symbols.toml`, generator, runtime, review sheet, tests, CI. Merge, then vendor `symbols.js` and `symbols-data.js` here with a NOTICE and the commit hash.
 4. **Wells**: the Volve adapter (well picks, perforations; names parsed per 3.2), the Sodir adapter for status and fluid, the well layer using SubScout symbols; wells over a surface, with the datum check.
 5. **Title box, scale bar and location map** as host components, fields exactly per the Geostandard.
 6. **Optional `geostandard` ramp and hydrocarbon colour set**; H and L marks; hachured depressions on isochores.
 
 ## Open decisions
 
-- Are you happy for me to open a change in SubScout (symbols spec and style guide page), or do you want to review a draft in this repo first and move it across?
 - Where does the fault type and downthrown side come from for Volve? The sticks and polygons have names only. Candidates: derive it from the surfaces (throw direction), take it from the Volve reports, or leave it unknown.
 - Should the Sodir adapter be shared with Wildcat's `fetch_sodir.py` (one place, two consumers), or stay separate for now?
 - Standard terminology in Norwegian as an option, or English only?

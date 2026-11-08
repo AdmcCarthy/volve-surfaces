@@ -1,32 +1,50 @@
-# Volve Surfaces
+# Volve, smoothed to be read
 
-**Shaded contour maps of the Volve geophysical interpretations, generalised for fast, readable display in the browser (D3).**
+Seismic horizons from the Volve field drawn as shaded contour maps in the browser, with the smoothing declared on every map. The grids are generalised for display: edge-preserving smoothing keeps the fault steps and removes the noise that gets in the way of reading a structure. The result is an interpretation made legible, not a survey-grade surface.
 
-Status: data pipeline and first viewer done. **Style options (editorial review): https://admccarthy.github.io/volve-surfaces/** · viewer: [/viewer.html](https://admccarthy.github.io/volve-surfaces/viewer.html). Plan: [docs/plan.md](docs/plan.md). Architecture: [docs/modules.md](docs/modules.md). **Focus: rendering surfaces from seismic interpretations** (horizons as shaded, stepped or linear contour maps, faults, scale bar, title box, location map, PNG export). Standards review: [docs/geostandard.md](docs/geostandard.md). **Work in progress, not the base case, paused:** hydrocarbon contacts ([docs/contacts.md](docs/contacts.md)) and closure analysis ([docs/contacts-structure.md](docs/contacts-structure.md)); on the site under [Work in progress](https://admccarthy.github.io/volve-surfaces/wip.html) and in the viewer's collapsed *Work in progress* group. Inventory: [docs/inventory.md](docs/inventory.md).
+## What it draws
+
+- Six horizons in depth and five in time: seabed, Shetland Gp top, Ty Fm top, Hugin Fm top and base, and the Base Cretaceous unconformity.
+- Linear-gradient or stepped fills on the Fjord ramp (other SubScout ramps are selectable), with the strongest colour always the deepest. Class step 10, 20, 50, 100 m or automatic, with an editable colour range.
+- Contour lines every 10, 20 or 50 m, and soft or strong shading lit across the measured fault trend.
+- Fault polygons and sticks from the interpretation, with throw measured from the surface either side.
+- A scale bar, north arrow and title box in the order of the Sodir Geostandard's title block, a location map on Relief's North Sea base, and PNG export of the whole sheet.
+- Light and dark themes. A synthetic data set with invented geology uses the same format and the same viewer.
+
+## Try it
+
+- Viewer: <https://admccarthy.github.io/volve-surfaces/viewer.html>
+- Style options for editorial review: <https://admccarthy.github.io/volve-surfaces/>
+
+## Basis of analysis
+
+- **Grids:** 25 m cells, north-up, 415 × 285, stored as Uint16 with an offset and scale. Contours are drawn in the browser (d3-contour).
+- **Coordinates:** the Volve files are ED50 / UTM 31N. They are converted to ETRS89 / UTM 31N (EPSG:25831) with the ED50 to WGS 84 (24) operation, a shift of about −90 m east and −215 m north, accurate to about 2 m.
+- **Depth:** metres below mean sea level, positive down, checked against 132 well picks on five surfaces (median difference −0.1 to 2.6 m; [docs/datum-check.md](docs/datum-check.md)).
+- **Smoothing:** edge-preserving diffusion at four levels (Raw, Light, Fine, Medium). Each map states the smoothing length and the mean and largest change from the source.
+- **Confidence:** the surfaces are Interpreted, as the source is an interpretation.
+
+## Build from source
 
 ```
 uv sync --all-groups
-uv run python scripts/inventory.py path/to/Volve_Geophysical_Interpretations.zip docs/inventory.md
-uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip   # -> data/out (11 Volve grids + manifest.json)
-PYTHONPATH=scripts uv run python -m adapters.volve.faults path/to/Volve_Geophysical_Interpretations.zip   # -> data/out/faults.json (ETRS89)
-PYTHONPATH=scripts uv run python -m adapters.volve.contacts path/to/Volve_Geophysical_Interpretations.zip # -> data/out/contacts.json (digitised, cited)
-uv run python scripts/structure.py                                             # -> closures.json and fault attributes (work in progress; run after the adapters)
-uv run python scripts/context.py path/to/Wildcat/data path/to/Relief         # -> data/context (location map: Relief base, Wildcat fields)
-uv run python scripts/synthetic.py                                               # -> data/synthetic (same format, invented geology)
+uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip        # data/out: grids and manifest
+PYTHONPATH=scripts uv run python -m adapters.volve.faults path/to/Volve_Geophysical_Interpretations.zip   # data/out/faults.json
+uv run python scripts/synthetic.py                                                  # data/synthetic
+uv run python scripts/structure.py                                                  # fault attributes (and closures.json)
+uv run python scripts/context.py path/to/Wildcat/data path/to/Relief               # location-map base
 uv run pytest
-uv run python scripts/stage.py && python -m http.server -d _site 8000   # preview the site locally
+uv run python scripts/stage.py && python -m http.server -d _site 8000               # preview the site
 ```
 
-`data/out` is derived from Volve and carries the Volve terms ([DATA-LICENCE.md](DATA-LICENCE.md)). `data/synthetic` is generated by this
-repo, is not Volve data and is MIT. Both use one grid format: 25 m cells, north-up, ED50 / UTM 31N, Uint16 with offset and scale.
+The pipeline, module layout and layer contract are in [docs/modules.md](docs/modules.md); the plan is [docs/plan.md](docs/plan.md); the Geostandard review is [docs/geostandard.md](docs/geostandard.md); the source inventory is [docs/inventory.md](docs/inventory.md).
 
-- Linear-gradient and stepped-class fills, optional contour lines, light and dark themes.
-- Horizons in depth and time, with fault sticks, fault polygons and well picks as overlays.
-- Smoothing trades fidelity for readability and is declared on every map.
-- Style follows [SubScout](https://github.com/AdmcCarthy/SubScout) and [Relief](https://github.com/AdmcCarthy/Relief).
+## Work in progress
+
+Hydrocarbon contacts, closure outlines and area-against-depth charts are experiments on top of the surfaces. They are paused, switched off by default and kept out of the base examples; they sit under *Work in progress* in the viewer and on [wip.html](https://admccarthy.github.io/volve-surfaces/wip.html). Notes: [docs/contacts.md](docs/contacts.md) and [docs/contacts-structure.md](docs/contacts-structure.md).
 
 ## Data and licence
 
-Contains data from the Volve data village, © Equinor ASA and the former Volve licence partners (ExxonMobil E&P Norway,
-Bayerngas Norge), used under the Volve Terms and Conditions. Generalised for display. Not endorsed by Equinor or the
-partners. See [DATA-LICENCE.md](DATA-LICENCE.md). Code: MIT.
+`data/out` is derived from Volve and carries the Volve terms ([DATA-LICENCE.md](DATA-LICENCE.md)); `data/synthetic` is generated by this repository, is not Volve data and is MIT. Contains data from the Volve data village, © Equinor ASA and the former Volve licence partners (ExxonMobil E&P Norway, Bayerngas Norge), used under the Volve Terms and Conditions. Generalised for display. Not endorsed by Equinor or the partners. Code: MIT.
+
+The location map uses [Relief](https://github.com/AdmcCarthy/Relief) (Copernicus DEM GLO-90 and EMODnet Bathymetry) and Sodir field outlines under NLOD 2.0; colours and style follow [SubScout](https://github.com/AdmcCarthy/SubScout).

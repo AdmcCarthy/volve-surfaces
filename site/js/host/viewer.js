@@ -5,6 +5,7 @@ import { stopsOf, RAMPS } from "../style/ramps.js";
 import { createSurfaceLayer } from "../layers/surface.js";
 import { createFaultLayer, loadFaults } from "../layers/faults.js";
 import { createContactsLayer, loadContacts } from "../layers/contacts.js";
+import { createClosuresLayer, loadClosures } from "../layers/closures.js";
 import { compose, probeAll } from "./view.js";
 import { sheetCanvas, downloadPng } from "./export.js";
 import { titleRows, renderTitleBox, drawLocator } from "./titlebox.js";
@@ -14,7 +15,7 @@ initRoot();
 const $ = (id) => document.getElementById(id);
 // Detail: how the surface is prepared for display. Smoothing is edge-preserving (fault steps are kept) and stated on the map.
 const DETAIL = { raw: { sigmaM: 0, upsample: 1 }, light: { sigmaM: 0, upsample: 2 }, fine: { sigmaM: 25, upsample: 2 }, medium: { sigmaM: 50, upsample: 2 } };
-const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off", contacts: "off", ccase: "", ccolour: "continuous", cfade: "on", cpalette: "subscout" };
+const defaults = { set: "real", h: "hugin_top_depth", fill: "stepped", ramp: "fjord", step: "auto", min: null, max: null, detail: "fine", contour: 10, shade: 0, light: "auto", faults: "off", contacts: "off", ccase: "", ccolour: "continuous", cfade: "on", cpalette: "subscout", closures: "off", tentative: "off" };
 const NUM = new Set(["contour", "shade", "min", "max"]);
 const state = { ...defaults };
 for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
@@ -23,13 +24,14 @@ for (const [k, v] of new URLSearchParams(location.hash.slice(1))) {
 }
 const sets = {};
 let sheet = null, g = null, info = null, layers = [], view = null;
-const faultData = {}, contactData = {};
+const faultData = {}, contactData = {}, closureData = {};
 let contextData = null;
 
 const getSet = (name) => (sets[name] ??= loadSet(`data/${name}`));
 const getFaults = (name) => (faultData[name] ??= loadFaults(`data/${name}`));
 const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw new Error(`${url}: ${r.status}`); return r.json(); });
 const getContext = () => (contextData ??= getJson("data/context/north_sea.json").then(async (c) => ({ ...c, baseData: await getJson(`data/context/${c.base}`) })));
+const getClosures = (name) => (closureData[name] ??= loadClosures(`data/${name}`));
 const getContacts = (name) => (contactData[name] ??= loadContacts(`data/${name}`));
 // the fault polygons that belong to the horizon on screen: hugin_top_depth and hugin_top_twt both show the top-Hugin polygons
 const horizonKey = (h) => (/^hugin_(top|base)_/.test(h) ? h.replace(/_(depth|twt)$/, "") : null);
@@ -59,11 +61,19 @@ async function draw() {
   const cd = state.contacts === "on" ? await getContacts(state.set).catch(() => null) : null;
   if (mine !== drawId) return;
   const cOk = cd && g.domain === "depth" && horizonKey(state.h) === cd.horizon && state.h.startsWith(cd.horizon);
-  $("f-ccase").hidden = $("f-ccolour").hidden = $("f-cfade").hidden = $("f-cpalette").hidden = state.contacts !== "on" || !cd;
+  $("f-tentative").hidden = $("f-ccase").hidden = $("f-ccolour").hidden = $("f-cfade").hidden = $("f-cpalette").hidden = state.contacts !== "on" || !cd;
   $("f-contacts-note").textContent = state.contacts !== "on" ? "" : !cd ? "No contacts for this data set." : cOk ? "" : "Contacts are drawn on the top Hugin depth map: choose Hugin Fm top, depth.";
   if (cd && !$("c-ccase").options.length) $("c-ccase").replaceChildren(...cd.cases.map((c) => new Option(c.label, c.id)));
   if (cd) { if (!cd.cases.some((c) => c.id === state.ccase)) state.ccase = cd.cases[0].id; $("c-ccase").value = state.ccase; }
-  if (cOk) ls.push(createContactsLayer(g, cd, { caseId: state.ccase, prepared: surface.prepared(), colour: state.ccolour, fade: state.cfade === "on", standard: state.cpalette === "geostandard" }));
+  if (cOk) ls.push(createContactsLayer(g, cd, { caseId: state.ccase, prepared: surface.prepared(), colour: state.ccolour, fade: state.cfade === "on", standard: state.cpalette === "geostandard", tentative: state.tentative === "on" }));
+  // closure analysis: highs and spill points of this depth horizon; with contacts on, the closures at the base contact
+  const cl = state.closures === "on" ? await getClosures(state.set).catch(() => null) : null;
+  if (mine !== drawId) return;
+  const contactsLayer = ls.find((l) => l.id === "contacts");
+  const baseContact = contactsLayer ? Math.max(...contactsLayer.fill.segments.filter((s) => s.model && !s.empty).map((s) => s.model.likely)) : null;
+  const clLayer = cl && g.domain === "depth" && cl.horizons[state.h] ? createClosuresLayer(g, cl, { horizon: state.h, contact: Number.isFinite(baseContact) ? baseContact : null }) : null;
+  $("f-closures-note").textContent = state.closures !== "on" ? "" : g.domain !== "depth" ? "Closures are found on the depth maps: choose a depth horizon." : !clLayer ? "No closure analysis for this data set or horizon." : "";
+  if (clLayer) ls.push(clLayer);
   const fd = state.faults === "off" ? null : await getFaults(state.set).catch(() => null);
   if (mine !== drawId) return;
   const fl = fd && createFaultLayer(fd, { polygons: ["polygons", "both"].includes(state.faults), sticks: ["sticks", "both"].includes(state.faults), horizon: horizonKey(state.h) });
@@ -115,6 +125,8 @@ bind("c-faults", "faults", [["off", "Off"], ["polygons", "Polygons"], ["sticks",
 bind("c-contacts", "contacts", [["off", "Off"], ["on", "On"]]);
 bind("c-ccolour", "ccolour", [["continuous", "Continuous"], ["stepped", "Stepped"]]);
 bind("c-cfade", "cfade", [["on", "Fade"], ["off", "None"]]);
+bind("c-closures", "closures", [["off", "Off"], ["on", "On"]]);
+bind("c-tentative", "tentative", [["off", "Off"], ["on", "On"]]);
 bind("c-cpalette", "cpalette", [["subscout", "SubScout"], ["geostandard", "Geostandard"]]);
 $("c-ccase").addEventListener("change", (e) => { state.ccase = e.target.value; draw(); });
 const scheme = seg($("c-scheme"), [["light", "Light"], ["dark", "Dark"]], document.documentElement.dataset.colourScheme, (v) => { setScheme(v); draw(); });

@@ -84,6 +84,18 @@ async () => {
 """
 
 PAGES = [
+    (
+        "viewer_closures",
+        "viewer.html?x=1#closures=on&contacts=on&tentative=on&faults=polygons",
+        "canvas#map",
+        "light",
+    ),
+    (
+        "viewer_closures_synthetic",
+        "viewer.html?x=2#set=synthetic&closures=on&contacts=on&ccase=model",
+        "canvas#map",
+        "dark",
+    ),
     ("viewer_locator", "viewer.html", ".vs-tb-loc canvas", "light"),
     (
         "viewer_contacts_standard",
@@ -173,6 +185,27 @@ def main(out: Path) -> int:
         fill_problems = page.evaluate(FILL)
         print(f"contacts fill and probability: {len(fill_problems)} problems")
         failures += [f"contacts: {p}" for p in fill_problems]
+        page.goto(
+            base
+            + "viewer.html?x=3#closures=on&contacts=on&tentative=on&faults=polygons"
+        )
+        page.wait_for_selector(".vs-tb-loc canvas")
+        page.wait_for_timeout(2500)
+        facts = page.inner_text("#facts").lower()
+        for need in (
+            "closures",
+            "tentative",
+            "bt2 and the fill",
+            "fault throw",
+            "not a seal analysis",
+        ):
+            if need not in facts:
+                failures.append(f"facts lack {need!r}")
+        print(
+            "closure and tentative facts present"
+            if all(n in facts for n in ("closures", "tentative", "bt2 and the fill"))
+            else "closure facts MISSING"
+        )
         page.goto(base + "viewer.html#contacts=on")
         page.wait_for_selector(".vs-tb-loc canvas")
         page.wait_for_timeout(1500)

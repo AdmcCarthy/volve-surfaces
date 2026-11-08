@@ -72,6 +72,11 @@ export function createFaultLayer(data, { polygons = true, sticks = false, horizo
       const rows = [];
       if (polys.length) rows.push({ label: "Faults", value: `${polys.length} interpreted fault polygons${stk.length ? ` and ${stk.length} fault sticks` : ""}. ${data.note ?? ""}`.trim() });
       else if (stk.length) rows.push({ label: "Faults", value: `${stk.length} interpreted fault sticks. ${data.note ?? ""}`.trim() });
+      const m = polys.filter((f) => f.attrs);
+      if (m.length) {
+        const th = m.map((f) => f.attrs.throw_m).sort((a, b) => a - b), med = th[Math.floor(th.length / 2)], big = m.filter((f) => (f.attrs.ratio ?? 0) > 1).length;
+        rows.push({ label: "Fault throw", value: `Measured on ${m.length} faults from the surface either side (regional dip removed): median ${Math.round(med)} m, ${big} with throw over the Hugin thickness. Measurements, not a fault-seal analysis: any fault, however small, may hold or pass fluid; sealing depends on things outside this viewer. Hover a fault for its numbers.`, level: "Derived" });
+      }
       return rows;
     },
     // the nearest fault within 30 m of a point
@@ -85,7 +90,9 @@ export function createFaultLayer(data, { polygons = true, sticks = false, horizo
           if (d < bd) { bd = d; best = f; }
         }
       }
-      return best ? { layer: "faults", label: best.name, value: null } : null;
+      const a = best?.attrs;
+      // throw and thickness are measurements; the ratio is a juxtaposition indicator, not a seal analysis (any fault may hold or pass fluid)
+      return best ? { layer: "faults", label: a ? `${best.name}: throw about ${Math.round(a.throw_m)} m${a.ratio != null ? `, ${a.ratio.toFixed(1)} of the Hugin thickness` : ""} (measured, not a seal analysis)` : best.name, value: null } : null;
     },
   };
 }

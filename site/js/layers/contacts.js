@@ -23,9 +23,10 @@ const fmt = d3.format(",.0f"), fmt1 = d3.format(",.1f");
 const shortWell = (n) => n.replace(/^NO 15\/9-/, "").replace(/^19 /, "19");
 
 // opts: { caseId, prepared (the surface layer's prepared grid), fill, lines, wells, barrier, outline, fade, colour: "continuous" | "stepped", columnStep,
+//         tentative: also show what the surface alone would add (docs/contacts-structure.md): cells reached from a proven fill through saddles at or above the base contact, beyond the provided outline and barriers; no well, no provided limit,
 //         standard: the Geostandard colours (6.12) and contact-line styles (6.27) instead of the SubScout hues; off by default, not colour-vision safe }
 export function createContactsLayer(g, data, opts = {}) {
-  const o = { fill: true, lines: true, wells: true, barrier: true, outline: true, fade: true, colour: "continuous", columnStep: null, standard: false, ...opts };
+  const o = { fill: true, lines: true, wells: true, barrier: true, outline: true, fade: true, colour: "continuous", columnStep: null, standard: false, tentative: false, ...opts };
   const kase = data.cases.find((c) => c.id === o.caseId) ?? data.cases[0];
   const setup = {
     outline: data.outline?.xy ?? null,
@@ -33,6 +34,17 @@ export function createContactsLayer(g, data, opts = {}) {
     segments: data.segments.map((s) => ({ id: s.id, name: s.name, seed: s.seed, contacts: kase.contacts.filter((c) => !c.segment || c.segment === s.id) })),
   };
   const fill = computeFill(g, setup);
+  // Tentative tier: the same fill with no outline and no barriers, at the single base contact of each segment, minus the provided fill.
+  const tent = (() => {
+    if (!o.tentative) return null;
+    const single = setup.segments.map((s) => ({ ...s, contacts: s.contacts.map((c) => ({ ...c, distribution: undefined, range: undefined })) }));
+    const open = computeFill(g, { outline: null, barriers: [], segments: single });
+    const mask = new Float32Array(g.nx * g.ny);
+    let n = 0;
+    for (let i = 0; i < mask.length; i++) if (open.labels[i] && !fill.labels[i]) { mask[i] = 1; n++; }
+    const wells = (data.evidence ?? []).filter((e) => { const x = Math.floor((e.xy[0] - g.x0) / g.cell), y = Math.floor((g.y0 - e.xy[1]) / g.cell); return x >= 0 && y >= 0 && x < g.nx && y < g.ny && mask[y * g.nx + x]; });
+    return { mask, area_km2: (n * g.cell * g.cell) / 1e6, open: open.segments.some((s) => s.open), wells };
+  })();
   const used = fill.segments.filter((s) => s.model && !s.empty);
   const fluids = [...new Set(used.flatMap((s) => [s.model.goc ? "gas" : null, s.model.base ? (s.model.gasOnly ? "gas" : "oil") : null].filter(Boolean)))];
   const colMax = Math.max(1, ...fill.segments.map((s) => s.columnMax)), step = o.columnStep ?? autoStep(0, colMax);
@@ -112,6 +124,15 @@ export function createContactsLayer(g, data, opts = {}) {
         }
         octx.putImageData(img, 0, 0);
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(off, 0, 0);
+      }
+
+      // ---- tentative tier: reached through saddles, no well and no provided limit; faded, with a dashed limit
+      if (tent && tent.area_km2 > 0) {
+        const shape = d3.contours().size([nx, ny]).smooth(true).thresholds([0.5])(tent.mask)[0];
+        ctx.save(); toGrid(); ctx.beginPath(); path(shape);
+        ctx.globalAlpha = 0.16; ctx.fillStyle = token("--ss-text-subtle"); ctx.fill();
+        ctx.globalAlpha = 0.9; ctx.strokeStyle = token("--ss-text-muted"); ctx.lineWidth = (1.4 * dpr) / pc; ctx.setLineDash([(5 * dpr) / pc, (4 * dpr) / pc]); ctx.stroke();
+        ctx.restore();
       }
 
       // ---- accumulation outline: the limit the fill is held to
@@ -215,6 +236,7 @@ export function createContactsLayer(g, data, opts = {}) {
       }
       if (o.barrier && (data.barriers ?? []).length) out.push({ kind: "hatch", label: "Segment barrier: fills and contacts do not merge across it" });
       if (o.outline && data.outline) out.push({ kind: "line", label: "Accumulation limit (the PUD model outline)", width: 1.1, dash: "2 4", alpha: 0.7 });
+      if (tent && tent.area_km2 > 0) out.push({ kind: "line", label: "Tentative: reached through saddles at the base contact, no well and no provided limit", width: 1.4, dash: "5 4", alpha: 0.9 });
       if (o.standard) out.push({ kind: "note", label: "Geostandard colours (6.12, 6.27), as the standard has them: oil green against gas red is not colour-vision safe." });
       if (o.wells && (data.evidence ?? []).length) {
         out.push({ kind: "symbol", svg: symbolSvg(wellSpec({ fluids: [["oil", "proven"]] }), { size: 26 }), label: "Well with oil" });
@@ -236,6 +258,14 @@ export function createContactsLayer(g, data, opts = {}) {
         rows.push({ label: s.name, value: `${why}. Map area, not a volume.` });
       }
       if ((data.evidence ?? []).length) rows.push({ label: "Wells", value: data.evidence.map((e) => `${shortWell(e.well)}: ${e.fluid} ${e.fluid === "oil" ? `${f(e.top)} to ${f(e.base)}` : `from ${f(e.top)}`} m`).join("; ") });
+      if (tent) rows.push({ label: "Tentative", value: tent.area_km2 > 0 ? `${d3.format(".1f")(tent.area_km2)} km² more is reached from the proven fill through saddles at the base contact if the outline and barriers are removed${tent.open ? "; that fill is open at the data edge, so the surface does not close it" : ""}. No well proves it${tent.wells.length ? `; ${tent.wells.map((e) => shortWell(e.well)).join(", ")} lies inside it` : ""}. Map area, not a volume.` : "Nothing more is reached through saddles at the base contact: the provided limits are not what holds the fill here.", level: "Derived" });
+      const base = Math.max(...seg.filter((s) => s.model && !s.empty).map((s) => s.model.likely), 0);
+      for (const e of data.evidence ?? []) {
+        const c = e.surface_connection;
+        if (!c || e.fluid !== "water") continue;
+        const k = c.to[0], pr = used[0]?.model ? probAt(used[0].model, k.pass_z) : null;
+        rows.push({ label: `${shortWell(e.well)} and the fill`, value: `Water-bearing, top Hugin ${f(c.top_hugin_z)} m. On the surface it connects to the oil wells at ${f(k.pass_z)} m${k.pass_z_walled && k.pass_z_walled !== k.pass_z ? `, at ${f(k.pass_z_walled)} m if fault polygons with throw over the reservoir thickness are walls (a juxtaposition indicator, not a seal analysis)` : ""}. An oil-water contact deeper than that would put this well in oil unless a barrier lies between${pr == null ? "" : `; in the PUD distribution that is ${Math.round(pr * 100)} % of cases at ${f(k.pass_z)} m`}.${base && base < k.pass_z ? ` The base contact (${f(base)} m) does not reach it.` : ""}`, level: "Derived" });
+      }
       for (const p of data.checks ?? []) if (p.case === kase.id) rows.push({ label: "Check", value: p.problem });
       if (o.standard) rows.push({ label: "Colours", value: "Geostandard 6.12 (oil green, gas red) and 6.27 (contact lines black with a coloured dash). Not colour-vision safe: oil against gas is a red-green pair. SubScout colours are the default." });
       if (data.georeference) rows.push({ label: "Digitised", value: `Barrier and outline traced from ${data.georeference.figure.split(", the")[0]}, placed by two wells: approximate to about ${data.georeference.accuracy_m} m.` });

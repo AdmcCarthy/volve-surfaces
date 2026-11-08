@@ -1,6 +1,19 @@
-# Contacts and structure: a plan to map closures, saddles and faults
+# Contacts and structure: closures, saddles and faults
 
-Status: **plan and first evidence, 2026-11-08.** Nothing in the viewer has changed. The probe is `scripts/probes/structure_probe.py` (`uv run --with pillow python scripts/probes/structure_probe.py`); its numbers are quoted below and are rough (see the limits).
+Status: **steps 1 to 4 built, 2026-11-08** (steps 5 and 6 below, the area-depth chart and the robustness gates, were not asked for and are not built). The Volve fill the viewer draws by default has not changed: it is still the provided outline and barrier. Everything here is an **analysis layer** you switch on.
+
+Decisions (yours, 2026-11-08): go with steps 1 and 2, then the 19BT2 test, up to step 4 but not 5. **Fault seal analysis is out of scope**: even small faults can be barriers to flow, and sealing depends on things outside this repository. So fault attributes here are measurements (throw, thickness, length, strike) and nothing in the code classes a fault as minor, leaky or sealing. The earlier idea of a "minor fault, never a barrier" class is dropped.
+
+## 0. What was built
+
+| Step | What | Where |
+|---|---|---|
+| 1 Closure engine | Merge tree of each depth grid: crests, relief, spill points (a saddle to a shallower high, or the edge of the data). Edge spills also report the saddle that would limit them if the edge were only the limit of mapping. Computed on the raw 25 m grid at build time. | `scripts/structure.py` -> `closures.json`; `site/js/layers/closures.js`; tests in `tests/test_structure.py` (analytic domes, noise, edge, fault gap) |
+| 2 Fault attributes | Throw from a plane fitted either side of each fault (regional dip removed), thickness from top and base Hugin, throw over thickness, length, strike. Recovers the synthetic generator's throws within 5 m. Measurements, not a seal analysis. | `scripts/structure.py` -> `attrs` in `faults.json`; shown on hover and in the facts |
+| 3 Wells and compartments | The existing provided segments keep their well limits; each water well now carries how it connects to the oil wells on the surface (`surface_connection`), with and without the fault polygons whose throw exceeds the thickness as walls. | `well_connections` in `structure.py` -> `contacts.json`; facts of the contacts layer |
+| 4 Display tiers | Proven fill (provided limits, as before) and an optional **tentative** tier: what the surface alone would add at the base contact, faded with a dashed limit, never drawn by default. Closure outlines at the base contact (solid = closed by the surface, dashed = open at the data edge), spill markers with their depths. | viewer controls *Closure analysis* and *Tentative fill* |
+
+Rebuild: `uv run python scripts/structure.py` (after `adapters.volve.contacts`, which rewrites `contacts.json`). The scratch probes are `scripts/probes/`.
 
 ## 1. The problem
 
@@ -21,8 +34,8 @@ Today a contact fill is a flood from a well through cells shallower than the con
 | Spill of the Volve high | **3,133 m**, at E 436350 N 6477725 | The base-model OWC (3,120) is 13 m above the spill and the P50 (3,135) is **at** it. Below 3,133 the surface no longer closes the trap; at 3,135 the connected area jumps from 8.4 to 19.7 km². The P10 (3,260) cannot be held by this surface: the outline is doing that. |
 | Satellite high south-west | crest 2,990 m, saddle 3,072 m, 82 m relief | At 3,120 m it floods, tentatively, with the main high. A clear example of "bigger closure filled by the contact". |
 | Fault control of the 3,120 m contour | 52 % of its length lies against a fault polygon, 37 % against nodata | The closure is mostly fault-limited: fault seal is first order, not a detail. |
-| Fault throw (78 top-Hugin polygons) | median 40 m; 10th to 90th percentile 14 to 82 m; 7 below 10 m, 18 between 10 and 30 m | About a third are minor (near or below seismic resolution at this depth). |
-| Throw against reservoir thickness (median thickness 73.5 m) | 21 faults throw more than the thickness, 24 between half and one, 33 under half | A first, defensible seal split: reservoir against non-reservoir (candidate seal), partial, reservoir against reservoir (leaky unless smear). |
+| Fault throw (77 measured top-Hugin polygons, dip removed) | median 23 m; 10th to 90th percentile 5 to 66 m; 21 below 10 m, 23 between 10 and 30 m, 33 at 30 m or more | Many faults are small. That says nothing about whether they seal: any may hold or pass fluid. |
+| Throw against reservoir thickness (median thickness 73.5 m) | 12 faults throw more than the thickness, 18 between half and one, 47 under half | A juxtaposition indicator only (reservoir against non-reservoir at the fault). It is shown, and used as an optional wall in one test, never as a seal call. |
 | Water well 19BT2 | top Hugin 3,137 m, water; 400 m from the 3,133 m saddle, and **the saddle is not in a fault polygon** | If it were in communication the OWC would be at or above 3,137 m, which half of the PUD distribution contradicts. The PUD says it is a separate segment, so a barrier exists that our polygons do not show here. Either a minor fault the polygons miss, or a barrier that is not structural. This is the single most useful thing to resolve. |
 
 Limits of the probe: throw is a median difference across a ring either side of a polygon along its principal axis (dip contaminates it); nodata in the grid is fault heave plus survey edge; saddles are on the generalised 25 m grid; no volumes. The numbers say where to look, they do not decide.
@@ -55,3 +68,21 @@ Ship the structural fill as the default only if it passes **all** of these; othe
 4. Only then add compartments, wells as limits and the tentative tier (steps 3 and 4).
 
 Open points for you: whether "minor" should mean below 10 or 15 m throw; whether tentative extensions should draw at all in the default view (my suggestion: only in the analysis overlay); and whether we may read the PUD pressure data for the 19BT2 separation (it is not in this repo).
+
+## 7. Results of the first build
+
+**Closures (top Hugin, depth).** The Volve high (H3, crest 2,802 m, relief 187 m) is **open at the edge of the data at 2,990 m**: the interpreted surface ends at the south-west before the closure closes. If that edge is treated as only the limit of mapping, the saddle that limits it is at **3,133 m** (so the earlier "spill at 3,133" holds only on that assumption). The three shallower neighbours (H4, H5, H7) are small saddle-limited satellites with 28, 14 and 33 m of relief. At the base contact (3,120 m) the surface-connected area is 8.4 km² and it is open at the data edge, so **the PUD's contacts below about 2,990 m are not closed by the data on their own**: the model outline and the barrier are doing real work, which is why the provided limits stay the default.
+
+**Tentative tier.** Removing the outline and barriers adds 3.5 km² at the base contact (8.4 km² against the 4.8 km² provided), open at the data edge, with no well in it.
+
+**The 19BT2 test.** Question: what separates the water well from the Volve high?
+
+- On the grid 19BT2 (top Hugin 3,146 m) is connected to both oil wells through a pass at its own depth: it sits on the flank of the high. Fault gaps as walls or bridged give the same answer.
+- The path to 19A runs 15 cells **inside the heave polygon of fault 68** (throw about 111 m, 1.3 times the Hugin thickness). A heave area in the grid is interpolated, so that connection is not evidence of communication.
+- Treating the polygons whose throw exceeds the thickness as walls (fault 68 is the one that matters; the result is identical for 68 alone) moves the pass from **3,146 m to 3,186 m**. Treating every polygon as a wall disconnects BT2 from both oil wells.
+- Reading: a contact down to 3,146 m needs no barrier (the base case, 3,120 m, does not reach the well). A contact between 3,146 and 3,186 m is compatible with BT2 being water only if something outside the grid separates them; beyond 3,186 m the surface connects them around fault 68. In the PUD distribution about 47 % of cases are deeper than 3,146 m and about a quarter deeper than 3,186 m. **Fault 68 is the candidate separating element**, consistent with the PUD calling BT2 a separate segment, but this is a juxtaposition indicator, not a seal analysis, and the digitised barrier (161 m away) is not the thing that separates them.
+- The two oil wells connect to each other on the surface at 3,010 m: below that the digitised barrier is what keeps the north and south segments apart.
+
+## 8. Not built (as agreed)
+
+Step 5 (the area-against-depth chart) and the robustness gates of section 5. The method of section 5 stays the standard to meet before the tentative tier is allowed to extend the default fill.

@@ -32,22 +32,41 @@ def header_lines(raw: bytes) -> list[str]:
 def horizon_stats(name: str, raw: bytes) -> dict:
     hdr = header_lines(raw)
     lines = raw.splitlines()
-    meta = [ln.decode("latin-1").strip() for ln in lines if ln.strip() and not ln.startswith(b"#") and not ROW.match(ln)]
+    meta = [
+        ln.decode("latin-1").strip()
+        for ln in lines
+        if ln.strip() and not ln.startswith(b"#") and not ROW.match(ln)
+    ]
     sections, prev_row = 1, False
     for ln in lines:
         is_row = bool(ROW.match(ln))
-        if prev_row and not is_row and ln.strip() and not ln.startswith(b"#") and ln.strip() != b",":
+        if (
+            prev_row
+            and not is_row
+            and ln.strip()
+            and not ln.startswith(b"#")
+            and ln.strip() != b","
+        ):
             sections += 1
         if ln.strip():
             prev_row = is_row
     body = b"\n".join(ln for ln in lines if ROW.match(ln))
-    df = pd.read_csv(io.BytesIO(body), header=None, names=["il", "xl", "x", "y", "z"], dtype=float)
+    df = pd.read_csv(
+        io.BytesIO(body), header=None, names=["il", "xl", "x", "y", "z"], dtype=float
+    )
     z = df["z"]
     null = (z.abs() > NULL_LIMIT) | (z <= -999) | z.isna()
     ok = df[~null]
     grid = ok.drop_duplicates(["il", "xl"])
     il, xl = np.sort(ok["il"].unique()), np.sort(ok["xl"].unique())
-    crs = next((re.sub(r"^#.*?:\s*", "", h) for h in hdr if "Target export data file cartographic" in h), "")
+    crs = next(
+        (
+            re.sub(r"^#.*?:\s*", "", h)
+            for h in hdr
+            if "Target export data file cartographic" in h
+        ),
+        "",
+    )
     return {
         "file": name.split("Horizons/")[-1],
         "rows": len(df),
@@ -67,7 +86,11 @@ def horizon_stats(name: str, raw: bytes) -> dict:
 
 
 def faults_stats(raw: bytes) -> str:
-    rows = [ln.decode("latin-1") for ln in io.BytesIO(raw) if ln.strip() and not ln.startswith((b"#", b"!"))]
+    rows = [
+        ln.decode("latin-1")
+        for ln in io.BytesIO(raw)
+        if ln.strip() and not ln.startswith((b"#", b"!"))
+    ]
     names = {ln[52:100].strip() for ln in rows}
     return f"{len(rows)} points, {len(names)} fault names"
 
@@ -75,8 +98,15 @@ def faults_stats(raw: bytes) -> str:
 def main(zip_path: str, out: str | None) -> None:
     lines = ["# Inventory", "", f"Source: `{zip_path}`", ""]
     with zipfile.ZipFile(zip_path) as zf:
-        horizons = [n for n in zf.namelist() if n.endswith(".dat") and "/Horizons/" in n]
-        lines += ["## Horizons", "", "| File | Domain | Rows | Nulls | Dup IL/XL | IL | XL | Grid fill | X | Y | Z |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+        horizons = [
+            n for n in zf.namelist() if n.endswith(".dat") and "/Horizons/" in n
+        ]
+        lines += [
+            "## Horizons",
+            "",
+            "| File | Domain | Rows | Nulls | Dup IL/XL | IL | XL | Grid fill | X | Y | Z |",
+            "|---|---|---|---|---|---|---|---|---|---|---|",
+        ]
         crs_seen: set[str] = set()
         for n in sorted(horizons):
             s = horizon_stats(n, zf.read(n))
@@ -92,8 +122,12 @@ def main(zip_path: str, out: str | None) -> None:
                 lines.append(f"- Fault sticks: {faults_stats(zf.read(n))}")
             elif n.endswith((".dat",)) and ("Fault_polygons" in n or "/Wells/" in n):
                 body = zf.read(n).decode("latin-1").splitlines()
-                data = [ln for ln in body if ln.strip() and not ln.startswith(("#", "!"))]
-                lines.append(f"- {n.split('Interpretations/')[-1]}: {len(data)} data lines; first: `{data[0][:110] if data else ''}`")
+                data = [
+                    ln for ln in body if ln.strip() and not ln.startswith(("#", "!"))
+                ]
+                lines.append(
+                    f"- {n.split('Interpretations/')[-1]}: {len(data)} data lines; first: `{data[0][:110] if data else ''}`"
+                )
     text = "\n".join(lines) + "\n"
     if out:
         with open(out, "w", encoding="utf-8") as f:

@@ -55,7 +55,7 @@ Required fields (1.2.2) and what we have today. Labels must be written exactly a
 | Projection | yes | in subtitle | `UTM` |
 | Central meridian | yes | no | `3°E` (zone 31) |
 | Geodetic datum | yes | in subtitle | after conversion: `ETRS89`. The source is ED50 |
-| **Vertical datum** | yes | **"not stated"** | see section 8: the Volve well files give TVDSS, so MSL is likely; verify against the surface at the wells |
+| **Vertical datum** | yes | `m below mean sea level, positive down` | verified: see [datum-check.md](datum-check.md). The Volve files themselves do not state it |
 | Date approved | yes | no | ISO 8601 `YYYY-MM-DD` |
 | Revision | yes | no | latest revision date |
 | Scale | yes | no | a **scale bar** is mandatory, plus `1:25 000` style text when printed |
@@ -158,9 +158,9 @@ unknown `6083a8`, CO2 `cdbd66`. Shows: proven oil `009900`, oil shows `00ff00`, 
 
 ## 8. Gaps in the current viewer, ranked
 
-1. **Vertical datum** is "not stated". The Volve well files give both TVD and TVDSS (for example MD 4160 m, TVD 2772.9 m, TVDSS -2694.9 m, so a 78 m reference above sea level). Compare
-   the horizon depth at a well pick with the pick's TVDSS: if the horizon depth equals minus the TVDSS to within a few metres, the horizons are depth below MSL, positive down. Do this before
-   drawing wells on surfaces. It is a free check.
+1. **Vertical datum: resolved 2026-11-08.** The source files do not state it, so it was tested: horizon depth at 132 well picks on five surfaces against minus the pick's TVDSS gives
+   median differences of -0.1 to 2.6 m, so the horizons are depth below mean sea level, positive down. The control (wells left in ED50 against ETRS89 grids) is clearly worse (Hugin top 36 m,
+   base 72 m), so the check separates a datum from a position. A few picks on faults differ by 60 to 100 m. Method and numbers: [datum-check.md](datum-check.md), `scripts/check_datum.py`.
 2. **Scale bar** (mandatory in the standard) and **location map** (preferable).
 3. **Title-box fields** (section 3).
 4. **H and L** marks, isochron hachures.

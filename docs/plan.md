@@ -124,6 +124,6 @@ volve-surfaces/
 ## 8. Open decisions (for the owner)
 
 - Repo name and whether to build as a standalone app or as a SubScout figure type from day one.
-- Depth datum and sign convention (m TVDSS, positive down?): to be read from headers/READMEs; not stated in the zip's README.
+- Depth datum and sign convention: resolved, mean sea level, positive down (docs/datum-check.md).
 - Whether to commit derived grids (allowed with attribution; about 1 to 2 MB for the official set) or build from a user-supplied zip.
 - Seabed (36 MB) and the 15 TWT surfaces are large; ship at coarser grids or leave to a later release.

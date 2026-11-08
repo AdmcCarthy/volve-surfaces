@@ -44,10 +44,12 @@ def test_resample_recovers_a_plane_and_masks_holes():
 def test_built_grids_match_manifest_and_budget():
     m = json.loads((OUT / "manifest.json").read_text(encoding="utf-8"))
     assert (
-        m["crs"] == "EPSG:23031"
-        and m["confidence"] == "Interpreted"
-        and "Equinor" in m["attribution"]
+        m["crs"] == "EPSG:25831"
+        and m["source_crs"] == "EPSG:23031"
+        and m["transformation_accuracy_m"] <= 2.0
     )
+    assert m["confidence"] == "Interpreted" and "Equinor" in m["attribution"]
+    assert "mean sea level" in m["vertical_datum"].lower()
     ids = {h["id"] for h in m["horizons"]}
     assert {"hugin_top_depth", "hugin_base_depth", "hugin_top_twt"} <= ids
     for h in m["horizons"]:
@@ -60,3 +62,18 @@ def test_built_grids_match_manifest_and_budget():
     assert (
         hb["hugin_top_depth"]["z_max"] < hb["hugin_base_depth"]["z_max"]
     )  # base is deeper than top
+
+
+def test_conversion_moves_volve_by_the_known_shift_and_is_reversible():
+    from crs import convert, to_canonical
+
+    x, y, info = convert([435000.0], [6478000.0])
+    assert info["target_crs"] == "EPSG:25831" and info["accuracy_m"] <= 2.0
+    assert (
+        abs((x[0] - 435000) - (-90.3)) < 3 and abs((y[0] - 6478000) - (-215.1)) < 3
+    )  # measured 2026-11-08
+    t, _ = (
+        to_canonical()
+    )  # the inverse of the chosen operation: pyproj's default reverse picks a coarser one (about 90 m off here)
+    back = t.transform(x[0], y[0], direction="INVERSE")
+    assert abs(back[0] - 435000) < 0.5 and abs(back[1] - 6478000) < 0.5

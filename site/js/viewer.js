@@ -44,7 +44,8 @@ async function draw() {
   $("l-step").textContent = `Class step (${g.unit})${state.step === "auto" ? `, auto ${step}` : ""}`;
   $("l-contour").textContent = `Contour lines (${g.unit})`;
   $("title").textContent = `${g.label}, ${g.domain === "twt" ? "two-way time" : "depth"}`;
-  $("sub").textContent = `${g.domain === "twt" ? "ms TWT" : "m, positive down, datum not stated"} · ED50 / UTM 31N (${g.manifest.crs.replace("EPSG:", "EPSG ")}) · 25 m grid`;
+  const crsName = { "EPSG:25831": "ETRS89 / UTM 31N" }[g.manifest.crs] ?? g.manifest.crs;
+  $("sub").textContent = `${g.domain === "twt" ? "ms TWT" : g.manifest.synthetic ? "m, synthetic datum" : "m below mean sea level, positive down"} · ${crsName} (${g.manifest.crs.replace("EPSG:", "EPSG ")}) · 25 m grid`;
   $("attr").textContent = g.manifest.synthetic ? g.manifest.attribution : ATTRIBUTION;
 }
 

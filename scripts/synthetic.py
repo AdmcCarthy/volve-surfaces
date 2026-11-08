@@ -20,7 +20,7 @@ from build import CELL, CRS, NODATA, quantise
 from scipy.ndimage import gaussian_filter
 
 # Frame of the same size and place as the real set, so one viewer layout fits both (ED50 / UTM 31N metres).
-X0, Y0, NX, NY = 429750.0, 6482375.0, 415, 285
+X0, Y0, NX, NY = 429650.0, 6482150.0, 415, 285
 ANGLE = np.deg2rad(-20)  # survey rotation
 HALF_U, HALF_V = 4200.0, 2100.0  # survey half-extent in rotated metres
 WATER = 92.0
@@ -179,7 +179,7 @@ def build(out_dir: str = "data/synthetic", seed: int = 7) -> None:
         "ny": NY,
         "dtype": "uint16-le",
         "nodata": NODATA,
-        "depth_datum": "synthetic (metres below an arbitrary datum)",
+        "vertical_datum": "synthetic (metres below an arbitrary datum)",
         "confidence": "Synthetic",
         "seed": seed,
         "attribution": ATTRIBUTION,

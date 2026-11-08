@@ -2,7 +2,7 @@
 
     uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip [out_dir]
 
-Every horizon is resampled onto ONE shared regular grid (native ED50 / UTM 31N metres, north-up), so horizons line up
+Every horizon is resampled onto ONE shared regular grid (ETRS89 / UTM 31N metres, north-up; the sources are ED50 and are converted per pick before gridding), so horizons line up
 for compare and isochore maps. Each grid is a little-endian Uint16 array, row-major from the north-west cell, with
 `z = offset + value * scale` and `nodata` for cells with no nearby pick. `manifest.json` records everything the viewer
 and the honesty badge need, including the resampling error against the source picks.
@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+from crs import CANONICAL, convert
 from scipy.interpolate import LinearNDInterpolator
 from scipy.spatial import cKDTree
 from volve_io import read_horizon
@@ -23,7 +24,11 @@ from volve_io import read_horizon
 CELL = 25.0  # metres
 HOLE = 60.0  # cells further than this from any pick are nodata
 NODATA = 65535
-CRS = "EPSG:23031"  # ED50 / UTM zone 31N, from the export headers (assumed where a header omits it)
+CRS = CANONICAL  # ETRS89 / UTM zone 31N; the Volve exports are ED50 / UTM 31N (EPSG:23031, from their headers, assumed where one omits it)
+VERTICAL_DATUM = (
+    "Mean sea level, depth positive down (the sign-reversed TVDSS of the well picks). "
+    "Checked against 132 well picks on five surfaces: median difference -0.1 to 2.6 m (docs/datum-check.md)"
+)
 
 ATTRIBUTION = (
     "Contains data from the Volve data village, © Equinor ASA and the former Volve licence partners "
@@ -147,6 +152,9 @@ def build(zip_path: str, out_dir: str = "data/out") -> None:
     data = {}
     for hid, suffix, label, domain, unit in HORIZONS:
         name, df, nsec = read_horizon(zip_path, suffix)
+        df["x"], df["y"], crs_info = convert(
+            df["x"], df["y"]
+        )  # ED50 -> ETRS89, per pick, before gridding
         data[hid] = (name, df, nsec, label, domain, unit)
         print(f"read {hid}: {len(df):,} picks, {nsec} section(s)", flush=True)
 
@@ -194,6 +202,8 @@ def build(zip_path: str, out_dir: str = "data/out") -> None:
 
     manifest = {
         "crs": CRS,
+        **{k: crs_info[k] for k in ("source_crs", "transformation")},
+        "transformation_accuracy_m": crs_info["accuracy_m"],
         "cell": CELL,
         "origin": {
             "x": x0,
@@ -205,7 +215,7 @@ def build(zip_path: str, out_dir: str = "data/out") -> None:
         "dtype": "uint16-le",
         "nodata": NODATA,
         "hole_distance_m": HOLE,
-        "depth_datum": "not stated in the source files",
+        "vertical_datum": VERTICAL_DATUM,
         "confidence": "Interpreted",
         "attribution": ATTRIBUTION,
         "horizons": entries,

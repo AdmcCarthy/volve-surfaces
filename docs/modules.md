@@ -77,8 +77,9 @@ Canonical is **EPSG:25831**. Measured here with pyproj 3.8 (offline, all grids p
 - Volve horizons are **ED50 / UTM 31N (EPSG:23031)**. The best available transformation, *ED50 to WGS 84 (24)* with ETRS89 as WGS 84, has a stated accuracy of **2 m** and moves a Volve point by about
   **-90 m east and -215 m north (about 233 m)**. Earlier notes in this repo said "about 100 m"; that was wrong. Ignoring it would put wells a quarter of a kilometre from the fault that should be next to them.
 - **Sodir wellbore coordinates are ED50 geographic (EPSG:4230)** (Wildcat stays in ED50 on purpose, to keep Sodir's block rectangles exact). Wells from Sodir need the same conversion.
-- Surfaces are built from scattered picks, so the conversion is applied to each pick **before** gridding: the grid frame becomes a north-up ETRS89 frame and nothing is resampled twice.
-  `data/out` and `data/synthetic` manifests then say `crs: EPSG:25831` and record `source_crs` and the transformation used.
+- Surfaces are built from scattered picks, so the conversion is applied to each pick **before** gridding: the grid frame is a north-up ETRS89 frame and nothing is resampled twice.
+  `data/out` and `data/synthetic` manifests say `crs: EPSG:25831`; the real one also records `source_crs`, the transformation and its accuracy. The synthetic set uses the same frame.
+- Convert only through `scripts/crs.py`. pyproj's default reverse transform (25831 to 23031) picks a coarser operation and lands about 90 m from the inverse of the one used here; a test guards this.
 - A layer that is handed another CRS is an error, not a silent reprojection.
 
 ## Where things go (target layout)
@@ -121,7 +122,7 @@ Wildcat, Tulip and the rest then call `classify()` and `draw()`; their own data 
 
 ## Roadmap
 
-0. **Prerequisites, small and independent.** Convert picks to ETRS89 in the build and rebuild the grids; verify the horizon depth datum against the well picks' TVDSS (Geostandard needs it as a title-box field).
+0. **Done (2026-11-08): prerequisites.** Picks are converted to ETRS89 in the build (`scripts/crs.py`) and the grids rebuilt, manifests say EPSG:25831 and record the transformation. The horizon depth datum is verified against the well picks' TVDSS: mean sea level, positive down ([datum-check.md](datum-check.md)).
 1. **Refactor this repo** to the layout above with the contract, no change in what the pages show. Add the shared contract test.
 2. **Faults as a vector layer**, from the Volve sticks and polygons, Geostandard line styles, black via `--ss-text`. Only plain and uncertain lines until type is known.
 3. **SubScout symbols spec** (needs your go-ahead to change that repo): style guide page, `symbols.toml`, generator, tests.

@@ -13,6 +13,7 @@ import sys
 import threading
 from pathlib import Path
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +50,7 @@ def main(out: Path) -> int:
     with sync_playwright() as p:
         try:
             browser = p.chromium.launch(channel="msedge")
-        except Exception:
+        except PlaywrightError:  # no Edge: try Chrome
             browser = p.chromium.launch(channel="chrome")
         for name, path, painted, scheme in PAGES:
             ctx = browser.new_context(

@@ -10,6 +10,8 @@ uv run python scripts/inventory.py path/to/Volve_Geophysical_Interpretations.zip
 uv run python scripts/build.py path/to/Volve_Geophysical_Interpretations.zip   # -> data/out (11 Volve grids + manifest.json)
 PYTHONPATH=scripts uv run python -m adapters.volve.faults path/to/Volve_Geophysical_Interpretations.zip   # -> data/out/faults.json (ETRS89)
 PYTHONPATH=scripts uv run python -m adapters.volve.contacts path/to/Volve_Geophysical_Interpretations.zip # -> data/out/contacts.json (digitised, cited)
+uv run python scripts/structure.py                                             # -> closures.json and fault attributes (work in progress; run after the adapters)
+uv run python scripts/context.py path/to/Wildcat/data path/to/Relief         # -> data/context (location map: Relief base, Wildcat fields)
 uv run python scripts/synthetic.py                                               # -> data/synthetic (same format, invented geology)
 uv run pytest
 uv run python scripts/stage.py && python -m http.server -d _site 8000   # preview the site locally

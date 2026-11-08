@@ -1,8 +1,7 @@
 # Hydrocarbon contacts
 
 The classical structure-map view: the part of a structure that holds each fluid, by contact, **per fault segment**, with the uncertainty shown. Built 2026-11-08 from the
-Volve reports, the Sodir Geostandard, web sources and the `ep_geoscience_analytics` knowledge base (read only). Try it: the viewer's *Hydrocarbon contacts* control, and the
-*Hydrocarbon contacts* section of the options page.
+Volve reports, the Sodir Geostandard, web sources and the `ep_geoscience_analytics` knowledge base (read only). **Work in progress and paused (2026-11-08), not part of the base case.** Try it: the viewer's collapsed *Work in progress* group, and `wip.html`.
 
 ## 1. What was built
 
@@ -14,7 +13,7 @@ Volve reports, the Sodir Geostandard, web sources and the `ep_geoscience_analyti
 | The compute: seeded fill with an outline and barriers, open or closed, fluids by contact, probability of hydrocarbons | `site/js/surface/fill.js` |
 | The layer (contract-conformant): fill, contact lines, hatched barriers, outline, wells with SubScout symbols, legend, facts, probe | `site/js/layers/contacts.js` |
 | Viewer: contacts on or off, case, column colour (continuous or stepped), uncertainty (fade or none) | `site/js/host/viewer.js` |
-| Options page: eight cards | `site/js/host/review.js` |
+| Options cards (now on `wip.html`, not the base options page) | `site/js/host/review.js` |
 | Checks | `tests/test_contacts.py`; `scripts/smoke.py` (fill, probability and the layer contract in a browser) |
 
 ## 2. Decisions taken (yours, 2026-11-08)
